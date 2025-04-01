@@ -111,7 +111,6 @@ class LoopNetScraper(BaseScraper):
                 self.input_text_with_wait(self.SELECTORS['location_box'], location, "location input", press_enter=True)
                 
             self.update_progress(0.2, progress_callback)
-            time.sleep(1)
             
             # Click sale/lease dropdown and select For Sale
             try:
@@ -128,7 +127,6 @@ class LoopNetScraper(BaseScraper):
             # Select property types
             try:
                 self.click_element(self.SELECTORS['property_type_dropdown'], "property type dropdown")
-                time.sleep(1)
             except Exception:
                 self._try_close_popup()
                 self.click_element(self.SELECTORS['property_type_dropdown'], "property type dropdown")
@@ -157,14 +155,12 @@ class LoopNetScraper(BaseScraper):
             
             # Click outside to close dropdown
             self.driver.execute_script("document.activeElement.blur();")
-            time.sleep(1)
             self.update_progress(0.35, progress_callback)
             
             # Open Other Filters
             try:
                 self.click_element(self.SELECTORS['other_filters_button'], "other filters button")
                 log_action(self.logger, "Opening Other Filters popup")
-                time.sleep(1)  # Allow popup to fully open
                 
                 # Update progress after opening filters popup
                 self.update_progress(0.4, progress_callback)
@@ -181,7 +177,6 @@ class LoopNetScraper(BaseScraper):
                             # Tab out of the field to ensure value is applied
                             element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['min_price_box'])
                             element.send_keys(Keys.TAB)
-                            time.sleep(1)  # Increased pause between min and max price
                         except Exception as e:
                             self.logger.warning(f"Standard approach for min price failed: {str(e)}")
                     
@@ -193,12 +188,10 @@ class LoopNetScraper(BaseScraper):
                         try:
                             log_action(self.logger, f"Setting maximum price: {max_price}")
                             self.input_text_with_wait(self.SELECTORS['max_price_box'], max_price, "maximum price input", clear_first=True)
-                            time.sleep(0.5)  # Short wait after inputting
                             
                             # Tab out of field to ensure value is applied
                             element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['max_price_box'])
                             element.send_keys(Keys.TAB)
-                            time.sleep(1)  # Wait after tabbing out
                         except Exception as e:
                             self.logger.warning(f"Standard approach for max price failed: {str(e)}")
                     
@@ -207,15 +200,11 @@ class LoopNetScraper(BaseScraper):
                     
                     # Click outside inputs to ensure focus is lost and prevent any unexpected form submission
                     self.driver.execute_script("document.activeElement.blur();")
-                    
-                    # Add a delay before moving on to ensure values persist
-                    time.sleep(2)
                 
                 # Set date filter if start_date is provided
                 if start_date:
                     # First click the custom date option
                     self.click_element(self.SELECTORS['custom_date_checkbox'], "custom date checkbox")
-                    time.sleep(1)  # Wait after clicking checkbox
                     
                     # Format the date string (MM/DD/YYYY)
                     date_str = start_date.strftime("%m/%d/%Y")
@@ -225,13 +214,9 @@ class LoopNetScraper(BaseScraper):
                     # Tab out of date field to ensure value is applied
                     element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['start_date_box'])
                     element.send_keys(Keys.TAB)
-                    time.sleep(1)  # Wait after date input
                     
                     # Update progress after setting date filter
                     self.update_progress(0.55, progress_callback)
-                
-                # Add delay before clicking search to ensure all inputs are processed
-                time.sleep(1)
                 
                 # Click Search button to apply filters
                 self.click_element(self.SELECTORS['search_button'], "search button")
@@ -250,7 +235,6 @@ class LoopNetScraper(BaseScraper):
                     pass
             
             self.update_progress(0.65, progress_callback)
-            time.sleep(3)  # Wait longer for search results to load
             
             # Update progress before extracting listings
             self.update_progress(0.7, progress_callback)

@@ -106,45 +106,6 @@ class BaseScraper(ABC):
         """)
         time.sleep(0.5)  # Short wait for DOM updates
 
-    def _wait_for_element_interactable(self, selector: str, timeout: int = 10) -> bool:
-        """Wait for an element to be truly interactable (not blocked by overlays)"""
-        try:
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                # First remove any overlays
-                self._remove_overlays()
-                
-                # Check if element exists and is interactable
-                element = self.driver.find_element(By.CSS_SELECTOR, selector)
-                if element.is_displayed():
-                    # Check if element is actually clickable
-                    try:
-                        # Try to scroll element into view
-                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                        time.sleep(0.2)
-                        
-                        # Check if element is in viewport
-                        is_in_viewport = self.driver.execute_script("""
-                            var element = arguments[0];
-                            var rect = element.getBoundingClientRect();
-                            return (
-                                rect.top >= 0 &&
-                                rect.left >= 0 &&
-                                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                                rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-                            );
-                        """, element)
-                        
-                        if is_in_viewport:
-                            return True
-                    except:
-                        pass
-                
-                time.sleep(0.5)
-            return False
-        except:
-            return False
-
     def click_element(self, selector_or_element, element_name: str = "", max_retries: int = 3) -> bool:
         """Click an element with comprehensive retry logic and multiple click strategies
         
@@ -215,29 +176,6 @@ class BaseScraper(ABC):
         if self.logger:
             self.logger.error(f"Failed to click {element_desc} after {max_retries} attempts")
         return False
-
-    def _handle_intercepted_click(self, selector: str, overlay_selector: str = "div.csgp-modal-overlay") -> bool:
-        """Handle a click that was intercepted by an overlay
-        
-        Args:
-            selector: The selector of the element we want to click
-            overlay_selector: The selector of the overlay to remove
-            
-        Returns:
-            bool: True if click was successful, False otherwise
-        """
-        try:
-            # Try clicking on the overlay to close it
-            overlay = self.driver.find_element(By.CSS_SELECTOR, overlay_selector)
-            overlay.click()
-            time.sleep(1)
-            
-            # Try clicking the element again
-            return self.click_element(selector)
-        except Exception as e:
-            if self.logger:
-                self.logger.warning(f"Error handling overlay: {str(e)}")
-            return False
 
     def input_text_with_wait(self, selector: str, text: str, element_name: str = "", press_enter: bool = False, clear_first: bool = True) -> bool:
         """Input text into an element with wait and robust handling
@@ -347,27 +285,6 @@ class BaseScraper(ABC):
                 self.logger.error(f"Error verifying page load: {str(e)}")
             return False
     
-    def _extract_listing_details(self, card: Any, selectors: Dict[str, str]) -> Dict[str, str]:
-        """Extract listing details from a card element using provided selectors
-        
-        Args:
-            card: The BeautifulSoup card element
-            selectors: Dictionary mapping field names to CSS selectors
-            
-        Returns:
-            Dict[str, str]: Dictionary of extracted details
-        """
-        details = {}
-        for field, selector in selectors.items():
-            try:
-                element = card.select_one(selector)
-                details[field] = element.text.strip() if element else f"{field} not available"
-            except Exception as e:
-                if self.logger:
-                    self.logger.error(f"Error extracting {field}: {str(e)}")
-                details[field] = f"{field} not available"
-        return details
-
     def update_progress(self, progress: float, progress_callback: Optional[Callable[[float], None]] = None) -> None:
         """Update progress with callback if provided
         

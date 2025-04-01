@@ -213,7 +213,6 @@ class CommercialMLSScraper(BaseScraper):
         log_action(self.logger, f"Setting location to: {location}")
         self.click_element(self.selectors["location_dropdown"], "location dropdown")
         self.input_text_with_wait(self.selectors["location_input"], location, "location input", press_enter=False)
-        time.sleep(1)
         
         # Update progress after setting location
         self.update_progress(0.25, progress_callback)
@@ -222,9 +221,7 @@ class CommercialMLSScraper(BaseScraper):
         self.logger.info("Selecting location from dropdown suggestions")
         element = self.driver.find_element(By.CSS_SELECTOR, self.selectors["location_input"])
         element.send_keys(Keys.DOWN)
-        time.sleep(0.5)
         element.send_keys(Keys.ENTER)
-        time.sleep(1)
         
         # Update progress after confirming location
         self.update_progress(0.3, progress_callback)
@@ -246,7 +243,6 @@ class CommercialMLSScraper(BaseScraper):
             if prop_type in self.property_type_map:
                 log_action(self.logger, f"Selecting property type: {prop_type}")
                 self.click_element(self.property_type_map[prop_type], f"{prop_type} checkbox")
-                time.sleep(0.5)
         
         # Update progress after setting property types
         self.update_progress(0.4, progress_callback)
@@ -255,11 +251,9 @@ class CommercialMLSScraper(BaseScraper):
         if min_price or max_price:
             log_action(self.logger, "Setting price range filters")
             self.click_element(self.selectors["price_dropdown"], "price dropdown")
-            time.sleep(1)  # Wait for dropdown to fully expand
             
             # Enable price checkbox
             self.click_element(self.selectors["price_checkbox"], "price checkbox")
-            time.sleep(1)  # Wait for checkbox to take effect
             
             # Update progress after opening price filters
             self.update_progress(0.45, progress_callback)
@@ -269,7 +263,6 @@ class CommercialMLSScraper(BaseScraper):
                 try:
                     log_action(self.logger, f"Setting minimum price: {min_price}")
                     self.input_text_with_wait(self.selectors["min_price_input"], min_price, "minimum price input")
-                    time.sleep(1)  # Increased pause between min and max price
                 except Exception as e:
                     self.logger.warning(f"Standard approach for min price failed: {str(e)}")
 
@@ -282,21 +275,16 @@ class CommercialMLSScraper(BaseScraper):
                 try:
                     # Use the standardized method for input
                     self.input_text_with_wait(self.selectors["max_price_input"], max_price, "maximum price input")
-                    time.sleep(1)  # Longer wait after inputting value
                     
                     # Send tab key to element to ensure value is applied
                     element = self.driver.find_element(By.CSS_SELECTOR, self.selectors["max_price_input"])
                     element.send_keys(Keys.TAB)
-                    time.sleep(1)  # Longer wait after tabbing out
                     
                 except Exception as e:
                     self.logger.warning(f"Standard approach for max price failed: {str(e)}")
             
             # Update progress after setting max price
             self.update_progress(0.52, progress_callback)
-            
-            # Add a delay before moving on to other dropdowns to ensure values persist
-            time.sleep(2)
         
         # Set date range if provided
         if start_date:
