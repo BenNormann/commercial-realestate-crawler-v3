@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import subprocess
+import ctypes
 import time
 from pathlib import Path
 
@@ -24,31 +25,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger('gui_launcher')
 
+def is_admin():
+    """Check if the current process has admin privileges"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except Exception as e:
+        logger.error(f"Error checking admin status: {e}")
+        return False
+
+def run_as_admin(cmd):
+    """Run a command with admin privileges"""
+    if isinstance(cmd, list):
+        cmd = ' '.join(cmd)
+    
+    try:
+        logger.info(f"Running with admin privileges: {cmd}")
+        if is_admin():
+            # Already admin, just run the command
+            return subprocess.run(cmd, shell=True, check=True)
+        else:
+            # Need to elevate
+            ctypes.windll.shell32.ShellExecuteW(
+                None, "runas", sys.executable, cmd, None, 1
+            )
+        return True
+    except Exception as e:
+        logger.error(f"Error running as admin: {e}")
+        return False
+
 def check_service_status():
     """Check if the service is installed and running"""
     try:
-        # Path to batch file
-        batch_file = os.path.join(os.path.dirname(__file__), 'service_runner.bat')
-        
-        if not os.path.exists(batch_file):
-            logger.warning(f"Service batch file not found: {batch_file}")
-            return False, False
-        
-        # Run the status command
-        process = subprocess.run([batch_file, 'status'], 
-                               stdout=subprocess.PIPE, 
-                               stderr=subprocess.PIPE,
-                               text=True, 
-                               creationflags=subprocess.CREATE_NO_WINDOW)
+        # Use SC command to check service status
+        process = subprocess.run(
+            ["sc", "query", "CommercialRealEstateScraper"], 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True, 
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
         
         output = process.stdout.lower()
-        logger.info(f"Service status output: {output}")
+        logger.debug(f"Service status raw output: {output}")
         
         # Check if service is installed
-        installed = "installed: true" in output or "'installed': True" in output
+        installed = "commercialrealestate" in output and "specified service does not exist" not in output
         
         # Check if service is running
-        running = "running: true" in output or "'running': True" in output
+        running = "running" in output
         
         logger.info(f"Service status: installed={installed}, running={running}")
         return installed, running
@@ -57,37 +81,49 @@ def check_service_status():
         logger.error(f"Error checking service status: {str(e)}")
         return False, False
 
-def run_service_command(command):
-    """Run a service command and wait for it to complete"""
-    try:
-        batch_file = os.path.join(os.path.dirname(__file__), 'service_runner.bat')
-        
-        # Create a direct command window that stays open if there are errors
-        process = subprocess.Popen([batch_file, command], 
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  text=True)
-        
-        # Wait for process to complete with timeout
-        stdout, stderr = process.communicate(timeout=30)
-        
-        logger.info(f"Service {command} completed with exit code {process.returncode}")
-        logger.info(f"Service {command} stdout: {stdout}")
-        
-        if process.returncode != 0:
-            logger.error(f"Service {command} stderr: {stderr}")
-            return False, stderr
-        
-        return True, stdout
+def install_service():
+    """Install the Windows service with admin elevation"""
+    logger.info("Installing service...")
     
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Service {command} is taking longer than expected")
-        # Don't kill the process - let it continue in the background
-        return True, "Command is still executing..."
+    try:
+        # Get path to current directory and service module
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Command to install service
+        install_cmd = f'-c "import sys; sys.path.append(r\'{current_dir}\'); from service.service import ScraperService; import win32serviceutil; win32serviceutil.HandleCommandLine(ScraperService, argv=[\'\', \'install\'])"'
+        
+        # Run the command with admin privileges
+        success = run_as_admin(install_cmd)
+        
+        # Add a delay to wait for installation
+        time.sleep(2)
+        
+        # Check if it was successful
+        installed, _ = check_service_status()
+        return installed
     
     except Exception as e:
-        logger.error(f"Error running service {command}: {str(e)}")
-        return False, str(e)
+        logger.error(f"Error during service installation: {str(e)}", exc_info=True)
+        return False
+
+def start_service():
+    """Start the Windows service with admin elevation"""
+    logger.info("Starting service...")
+    
+    try:
+        # Run the net start command with admin privileges
+        success = run_as_admin("net start CommercialRealEstateScraper")
+        
+        # Add a delay to wait for start
+        time.sleep(2)
+        
+        # Check if it was successful
+        _, running = check_service_status()
+        return running
+    
+    except Exception as e:
+        logger.error(f"Error starting service: {str(e)}")
+        return False
 
 def prompt_service_action_gui():
     """Prompt user with GUI dialogs to install or start the service if needed"""
@@ -107,28 +143,14 @@ def prompt_service_action_gui():
                 None, 
                 "Service Not Installed",
                 "The Real Estate Crawler service is not installed.\n\n"
-                "Would you like to install it now?",
+                "Would you like to install it now? (Requires admin privileges)",
                 QMessageBox.Yes | QMessageBox.No
             )
             
             if result == QMessageBox.Yes:
-                logger.info("Installing service...")
+                success = install_service()
                 
-                batch_file = os.path.join(os.path.dirname(__file__), 'service_runner.bat')
-                
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'install',
-                    '-Verb', 'RunAs'
-                ])
-                
-                # Wait a bit for the admin prompt and installation to happen
-                time.sleep(5)
-                
-                # Check if installation was successful
-                installed, _ = check_service_status()
-                if installed:
+                if success:
                     QMessageBox.information(
                         None,
                         "Service Installed",
@@ -137,8 +159,9 @@ def prompt_service_action_gui():
                 else:
                     QMessageBox.warning(
                         None,
-                        "Installation Pending",
-                        "The service installation was initiated. Please check the console window for details."
+                        "Installation Issue",
+                        "There may have been an issue with the installation.\n\n"
+                        "Check the logs for more details."
                     )
         
         elif not running:
@@ -146,28 +169,14 @@ def prompt_service_action_gui():
                 None, 
                 "Service Not Running",
                 "The Real Estate Crawler service is installed but not running.\n\n"
-                "Would you like to start it now?",
+                "Would you like to start it now? (Requires admin privileges)",
                 QMessageBox.Yes | QMessageBox.No
             )
             
             if result == QMessageBox.Yes:
-                logger.info("Starting service...")
+                success = start_service()
                 
-                batch_file = os.path.join(os.path.dirname(__file__), 'service_runner.bat')
-                
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'start',
-                    '-Verb', 'RunAs'
-                ])
-                
-                # Wait a bit for the admin prompt and service to start
-                time.sleep(5)
-                
-                # Check if service started successfully
-                _, running = check_service_status()
-                if running:
+                if success:
                     QMessageBox.information(
                         None,
                         "Service Started",
@@ -176,8 +185,9 @@ def prompt_service_action_gui():
                 else:
                     QMessageBox.warning(
                         None,
-                        "Start Pending",
-                        "The service start was initiated. Please check the console window for details."
+                        "Start Issue",
+                        "There may have been an issue starting the service.\n\n"
+                        "Check the logs for more details."
                     )
     
     except Exception as e:

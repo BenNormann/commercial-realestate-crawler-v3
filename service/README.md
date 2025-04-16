@@ -1,56 +1,72 @@
-# Commercial Real Estate Crawler Windows Service
+# Commercial Real Estate Scraper Service
 
-This module provides a Windows service that runs in the background and executes real estate scraping tasks at scheduled times.
+A Windows service for automating the scraping of commercial real estate websites at scheduled times.
 
 ## Features
 
-- Runs as a Windows service in the background
-- Starts automatically with Windows
-- Can be controlled through the GUI or command-line
-- Executes scraping tasks at configured times
-- Sends email notifications with results
+- Automatically scrapes commercial real estate listings based on configured parameters
+- Runs as a background Windows service
+- Supports scheduled execution at specific times
+- Detects and executes missed runs (e.g., when computer was off)
+- Supports manual trigger of scraping via "run now" functionality
 
-## Usage
+## Installation and Usage
 
-### Through the GUI
+### Prerequisites
 
-The Commercial Real Estate Crawler GUI provides controls to install, remove, start, and stop the service.
+- Windows operating system
+- Python 3.7 or higher
+- Required Python packages:
+  - pywin32
+  - Other dependencies of the scraper
 
-### Command-Line
+### Installing the Service
 
-You can also manage the service using the `service_launcher.py` script:
+1. Open an elevated command prompt (Run as Administrator)
+2. Navigate to the project directory
+3. Run the installation command:
 
-```bash
-# Install the service
-python -m service.service_launcher --install
-
-# Start the service
-python -m service.service_launcher --start
-
-# Stop the service
-python -m service.service_launcher --stop
-
-# Remove the service
-python -m service.service_launcher --remove
-
-# Check service status
-python -m service.service_launcher --status
-
-# Run directly (for testing)
-python -m service.service_launcher --run
+```
+python -m service.service install
 ```
 
-## Configuration
+### Service Management
 
-The service reads configuration from the user's configuration file at `~/.commercialrealestate/config.json`.
+- **Start the service**:
+  ```
+  python -m service.service start
+  ```
 
-Key configuration options:
+- **Stop the service**:
+  ```
+  python -m service.service stop
+  ```
 
-- `enable_background`: Whether to enable background task execution
-- `background_time`: Time of day to execute the task (format: "HH:MM")
-- `send_email`: Whether to send email notifications
-- Other scraping configuration options (property types, location, etc.)
+- **Remove the service**:
+  ```
+  python -m service.service remove
+  ```
+
+- **Run scraper immediately** (without waiting for scheduled time):
+  ```
+  python -m service.service run_now
+  ```
+
+### Configuration
+
+The service uses the configuration from the main application's config file. 
+You can modify the following settings that affect the service:
+
+- `enable_background`: Set to `true` to enable scheduled scraping
+- `background_time`: Time to run the scraper daily (format: "HH:MM")
+- Other scraping parameters (property types, location, price range, etc.)
 
 ## Logs
 
-The service logs to `~/.commercialrealestate/logs/service.log`. 
+The service logs are stored in `service/service.log`. Check this file for debugging or to verify operation.
+
+## Troubleshooting
+
+- If the service fails to start, check the Windows Event Viewer for error messages
+- Ensure the config.json file exists and contains valid configuration
+- Verify that the service has appropriate permissions to access the internet and file system 

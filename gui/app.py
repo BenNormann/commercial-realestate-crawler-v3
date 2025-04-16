@@ -7,9 +7,13 @@ import sys
 import json
 import time
 import logging
+import ctypes
 from datetime import datetime
 from pathlib import Path
 import subprocess
+import win32serviceutil
+import win32service
+import threading
 
 # Add parent directory to path for imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -34,22 +38,35 @@ from PyQt5.QtGui import QColor, QIcon, QFont, QPalette
 # Import project modules
 import config
 # Import service directly
-from service import install_service, remove_service, start_service, stop_service, get_service_status
+from service import ScraperService, install
+# Create service runner script dynamically
 import userinfo
 
 class WorkerThread(QThread):
     """Worker thread for background tasks"""
     progress_updated = pyqtSignal(dict)
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.running = True
+        self.parent = parent
     
     def run(self):
         """Run the worker thread"""
         while self.running:
             # Get service status directly
-            status = get_service_status()
+            status = {}
+            try:
+                # Use the parent's method to get status
+                if self.parent and hasattr(self.parent, '_get_service_status'):
+                    status = self.parent._get_service_status()
+                else:
+                    # Fallback if parent not set or method missing
+                    status = {"installed": False, "running": False, "executing": False, "error": "Parent reference error"}
+            except Exception as e:
+                logger.error(f"Error in worker thread: {str(e)}")
+                status = {"installed": False, "running": False, "executing": False, "error": str(e)}
+                
             self.progress_updated.emit(status)
             
             # Sleep for a bit
@@ -71,6 +88,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Commercial Real Estate Crawler")
         self.setGeometry(100, 100, 1200, 800)
         
+        # Installation flag to prevent multiple installation attempts
+        self.installation_pending = False
+        
         # Setup styles (dark theme)
         self.setup_dark_theme()
         
@@ -83,8 +103,50 @@ class MainWindow(QMainWindow):
         # Load values into UI elements
         self.load_values()
         
+        # Initial service check - but do NOT auto-install
+        # (launcher.py now handles installation)
+        
         # Setup background status checker
         self.setup_status_checker()
+    
+    def _get_service_status(self):
+        """Get the status of the service using sc query"""
+        try:
+            # Check if service is installed
+            result = subprocess.run(
+                ["sc", "query", "CommercialRealEstateScraper"], 
+                capture_output=True, 
+                text=True, 
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # Parse result
+            status_info = {
+                "installed": False,
+                "running": False,
+                "executing": False,
+                "error": ""
+            }
+            
+            # If service exists
+            if "RUNNING" in result.stdout:
+                status_info["installed"] = True
+                status_info["running"] = True
+            elif "STOPPED" in result.stdout:
+                status_info["installed"] = True
+            elif "specified service does not exist" not in result.stdout:
+                # If the query succeeded but service is in another state
+                status_info["installed"] = True
+                
+            # Check for error
+            if result.stderr:
+                status_info["error"] = result.stderr.strip()
+                
+            return status_info
+            
+        except Exception as e:
+            logger.error(f"Error getting service status: {str(e)}")
+            return {"installed": False, "running": False, "executing": False, "error": str(e)}
     
     def load_config(self):
         """Load configuration from file"""
@@ -369,11 +431,6 @@ class MainWindow(QMainWindow):
         service_group = QGroupBox("Service Control")
         service_layout = QHBoxLayout(service_group)
         
-        # Install button
-        self.install_button = QPushButton("Install Service")
-        self.install_button.clicked.connect(self.install_service)
-        service_layout.addWidget(self.install_button)
-        
         # Start button
         self.start_button = QPushButton("Start Service")
         self.start_button.clicked.connect(self.start_service)
@@ -539,15 +596,16 @@ class MainWindow(QMainWindow):
     
     def setup_status_checker(self):
         """Set up the status checker thread"""
-        self.worker_thread = WorkerThread()
+        self.worker_thread = WorkerThread(self)
         self.worker_thread.progress_updated.connect(self.update_status)
         self.worker_thread.start()
     
     def update_status(self):
         """Update the status of the service and the UI elements."""
         try:
-            status = get_service_status()
-            logger.debug(f"Status response: {status}")
+            # Get service status
+            service_status_info = self._get_service_status()
+            logger.debug(f"Status response: {service_status_info}")
             
             # Clear connection error if we got a valid response
             self.connection_error = False
@@ -555,21 +613,22 @@ class MainWindow(QMainWindow):
             # Reset error display if we got a valid response
             self.error_label.setText("")
             
-            if status is None:
+            if service_status_info is None:
                 logger.error("Received None status")
                 self.status_label.setText("Unknown")
                 return
             
-            # Extract status information from new service
-            installed = status.get("installed", False)
-            running = status.get("running", False)
-            executing = status.get("executing", False)
-            error_msg = status.get("error", "")
+            # Extract status information
+            installed = service_status_info.get("installed", False)
+            running = service_status_info.get("running", False)
+            executing = service_status_info.get("executing", False)
+            error_msg = service_status_info.get("error", "")
             
-            # Determine service status from new fields
+            # Determine service status from fields
             service_status = "unknown"
             if not installed:
                 service_status = "not installed"
+                # Don't auto-install here anymore
             elif not running:
                 service_status = "stopped"
             elif executing:
@@ -582,15 +641,14 @@ class MainWindow(QMainWindow):
             # Update status label
             self.status_label.setText(service_status.capitalize())
             
-            # Update last_run and next_run (not available in new service)
-            # Just show "N/A" for now as this information is not tracked in the new service
+            # Update last_run and next_run
             self.last_run_label.setText("N/A")
             self.next_run_label.setText("N/A")
             
-            # Update results count (not available in new service)
+            # Update results count
             self.results_count_label.setText("N/A")
             
-            # Update progress (not available in new service)
+            # Update progress
             self.progress_bar.setValue(0)
             if executing:
                 self.progress_bar.setMaximum(0)  # Show indeterminate progress
@@ -608,33 +666,32 @@ class MainWindow(QMainWindow):
                 self.start_button.setEnabled(False)
                 self.stop_button.setEnabled(False)
                 self.schedule_button.setEnabled(False)
-                self.install_button.setEnabled(True)
                 self.remove_button.setEnabled(False)
             elif service_status == "stopped":
                 self.start_button.setEnabled(True)
                 self.stop_button.setEnabled(False)
                 self.schedule_button.setEnabled(False)
-                self.install_button.setEnabled(False)
                 self.remove_button.setEnabled(True)
             elif service_status == "running":
                 self.start_button.setEnabled(False)
                 self.stop_button.setEnabled(True)
                 self.schedule_button.setEnabled(True)
-                self.install_button.setEnabled(False)
                 self.remove_button.setEnabled(False)
             elif service_status == "executing":
                 self.start_button.setEnabled(False)
                 self.stop_button.setEnabled(True)
                 self.schedule_button.setEnabled(False)
-                self.install_button.setEnabled(False)
                 self.remove_button.setEnabled(False)
             else:
                 # Default case for unknown statuses
                 self.start_button.setEnabled(False)
                 self.stop_button.setEnabled(False)
                 self.schedule_button.setEnabled(False)
-                self.install_button.setEnabled(True)
-                self.remove_button.setEnabled(False)
+                self.remove_button.setEnabled(True)
+                
+            # Reset installation pending flag if service is now installed
+            if installed:
+                self.installation_pending = False
         
         except Exception as e:
             # Handle connection errors
@@ -648,7 +705,6 @@ class MainWindow(QMainWindow):
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.schedule_button.setEnabled(False)
-            self.install_button.setEnabled(True)
             self.remove_button.setEnabled(False)
             
             # Show error
@@ -710,40 +766,13 @@ class MainWindow(QMainWindow):
             logger.error(f"Error saving configuration: {str(e)}")
             QMessageBox.warning(self, "Warning", f"Failed to save configuration: {str(e)}")
     
-    def install_service(self):
-        """Install the Windows service with administrator privileges"""
-        try:
-            # Show confirmation dialog
-            result = QMessageBox.question(
-                self, 
-                "Administrator Privileges Required",
-                "Installing the service requires administrator privileges.\n\n"
-                "Click 'Yes' to continue with the installation.",
-                QMessageBox.Yes | QMessageBox.No
-            )
-            
-            if result == QMessageBox.Yes:
-                # Path to the service batch file
-                batch_file = os.path.join(parent_dir, 'service_runner.bat')
-                
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'install',
-                    '-Verb', 'RunAs'
-                ])
-                
-                QMessageBox.information(
-                    self,
-                    "Installation Started",
-                    "The service installation has started.\n\n"
-                    "If there are any errors, the terminal window will remain open.\n"
-                    "Once installation is complete, click 'Start Service' to start the service."
-                )
-        
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error during service installation: {str(e)}")
-            
+    def check_and_install_service(self):
+        """Check if service is installed and install if needed - REMOVED FUNCTIONALITY"""
+        # This functionality has been moved to launch_gui.py
+        # We no longer auto-install on app start
+        logger.info("Service installation is now handled by the launcher")
+        # No actual implementation needed
+    
     def start_service(self):
         """Start the Windows service"""
         try:
@@ -757,21 +786,19 @@ class MainWindow(QMainWindow):
             )
             
             if result == QMessageBox.Yes:
-                # Path to the service batch file
-                batch_file = os.path.join(parent_dir, 'service_runner.bat')
+                # Create a temporary vbs script to elevate privileges
+                vbs_path = os.path.join(os.environ['TEMP'], 'elevate_service_start.vbs')
+                with open(vbs_path, 'w') as f:
+                    f.write('Set UAC = CreateObject("Shell.Application")\n')
+                    f.write('UAC.ShellExecute "net", "start CommercialRealEstateScraper", "", "runas", 1\n')
                 
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'start',
-                    '-Verb', 'RunAs'
-                ])
+                # Execute the VBS script
+                subprocess.Popen(['cscript.exe', vbs_path])
                 
                 QMessageBox.information(
                     self,
                     "Service Starting",
                     "The service start command has been executed.\n\n"
-                    "If there are any errors, the terminal window will remain open.\n"
                     "Please wait a few moments for the service to start."
                 )
         
@@ -791,21 +818,19 @@ class MainWindow(QMainWindow):
             )
             
             if result == QMessageBox.Yes:
-                # Path to the service batch file
-                batch_file = os.path.join(parent_dir, 'service_runner.bat')
+                # Create a temporary vbs script to elevate privileges
+                vbs_path = os.path.join(os.environ['TEMP'], 'elevate_service_stop.vbs')
+                with open(vbs_path, 'w') as f:
+                    f.write('Set UAC = CreateObject("Shell.Application")\n')
+                    f.write('UAC.ShellExecute "net", "stop CommercialRealEstateScraper", "", "runas", 1\n')
                 
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'stop',
-                    '-Verb', 'RunAs'
-                ])
+                # Execute the VBS script
+                subprocess.Popen(['cscript.exe', vbs_path])
                 
                 QMessageBox.information(
                     self,
                     "Service Stopping",
                     "The service stop command has been executed.\n\n"
-                    "If there are any errors, the terminal window will remain open.\n"
                     "Please wait a few moments for the service to stop."
                 )
         
@@ -825,21 +850,33 @@ class MainWindow(QMainWindow):
             )
             
             if result == QMessageBox.Yes:
-                # Path to the service batch file
-                batch_file = os.path.join(parent_dir, 'service_runner.bat')
+                # Create a small Python script that will handle the removal
+                remove_script = os.path.join(os.environ['TEMP'], 'remove_service.py')
                 
-                # Launch with administrator privileges
-                subprocess.Popen([
-                    'powershell', 'Start-Process', 
-                    f'"{batch_file}"', '-ArgumentList', 'remove',
-                    '-Verb', 'RunAs'
-                ])
+                # Write the removal script
+                with open(remove_script, 'w') as f:
+                    f.write('import sys\n')
+                    f.write('import os\n')
+                    f.write(f'sys.path.append(r"{parent_dir}")\n')  # Add parent directory to path
+                    f.write('import win32serviceutil\n')
+                    f.write('from service.service import ScraperService\n')
+                    f.write('win32serviceutil.HandleCommandLine(ScraperService, argv=["", "remove"])\n')
+                
+                # Create a VBS script to run the Python script with admin privileges
+                vbs_path = os.path.join(os.environ['TEMP'], 'elevate_service_remove.vbs')
+                with open(vbs_path, 'w') as f:
+                    f.write('Set UAC = CreateObject("Shell.Application")\n')
+                    py_path = sys.executable.replace('\\', '\\\\')
+                    script_path = remove_script.replace('\\', '\\\\')
+                    f.write(f'UAC.ShellExecute "{py_path}", "{script_path}", "", "runas", 1\n')
+                
+                # Execute the VBS script to run with admin privileges
+                subprocess.Popen(['cscript.exe', vbs_path])
                 
                 QMessageBox.information(
                     self,
                     "Service Removal",
                     "The service removal command has been executed.\n\n"
-                    "If there are any errors, the terminal window will remain open.\n"
                     "Please wait a few moments for the service to be removed."
                 )
         
@@ -871,14 +908,53 @@ class MainWindow(QMainWindow):
     
     def run_search_now(self):
         """Run the search immediately"""
-        # This requires a different approach with the new service design
-        # For now, just inform the user that they need to use manual search
-        QMessageBox.information(
-            self, 
-            "Manual Search Required", 
-            "The new service doesn't support on-demand searches through the service.\n\n"
-            "Please use the 'Search' button in the top panel to run a manual search."
-        )
+        try:
+            # Show confirmation dialog
+            result = QMessageBox.question(
+                self, 
+                "Run Immediate Search",
+                "This will trigger an immediate search with the current configuration settings.\n\n"
+                "Click 'Yes' to continue.",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if result == QMessageBox.Yes:
+                # Create a small Python script that will run the scraper
+                run_script = os.path.join(os.environ['TEMP'], 'run_service_now.py')
+                
+                # Write the run script
+                with open(run_script, 'w') as f:
+                    f.write('import sys\n')
+                    f.write('import os\n')
+                    f.write(f'sys.path.append(r"{parent_dir}")\n')  # Add parent directory to path
+                    f.write('import servicemanager\n')
+                    f.write('from service.service import ScraperService\n')
+                    f.write('servicemanager.Initialize()\n')
+                    f.write('servicemanager.PrepareToHostSingle(ScraperService)\n')
+                    f.write('service = ScraperService([])\n')
+                    f.write('service.run_scraper()\n')
+                
+                # Create a VBS script to run the Python script with admin privileges
+                vbs_path = os.path.join(os.environ['TEMP'], 'elevate_service_run_now.vbs')
+                with open(vbs_path, 'w') as f:
+                    f.write('Set UAC = CreateObject("Shell.Application")\n')
+                    py_path = sys.executable.replace('\\', '\\\\')
+                    script_path = run_script.replace('\\', '\\\\')
+                    f.write(f'UAC.ShellExecute "{py_path}", "{script_path}", "", "runas", 1\n')
+                
+                # Execute the VBS script to run with admin privileges
+                subprocess.Popen(['cscript.exe', vbs_path])
+                
+                # Show confirmation to user
+                QMessageBox.information(
+                    self,
+                    "Search Started",
+                    "The immediate search has been triggered.\n\n"
+                    "Check the results tab or log files for search results."
+                )
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error triggering immediate search: {str(e)}")
     
     def refresh_results(self):
         """Refresh the results display"""
@@ -886,7 +962,7 @@ class MainWindow(QMainWindow):
         self.results_text.append("Refreshing status...")
         
         # Get the status directly from service
-        status = get_service_status()
+        status = self._get_service_status()
         
         # Display the service status
         self.results_text.append("\nService Status:")
