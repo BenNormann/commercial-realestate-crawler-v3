@@ -1,125 +1,164 @@
 # Commercial Real Estate Crawler
 
-A Python application to search and monitor commercial real estate listings across multiple websites.
+A web crawler for commercial real estate websites with a Windows service for scheduled execution.
 
-## Features
+## Overview
 
-- **Multi-platform search**: Search both commercialmls.com and loopnet.com simultaneously
-- **Property type filtering**: Select from Office, Retail, Industrial, Multi-Family, Land, or Hotel properties
-- **Price range filtering**: Set minimum and maximum price constraints
-- **Location-based search**: Currently optimized for Seattle, WA
-- **Time-based filtering**: Search for listings from the last X days
-- **Email notifications**: Receive search results via email
-- **Daily monitoring**: Schedule automated daily searches with email reports
-- **Modern UI**: Clean, responsive interface with dark mode support
-
-## Prerequisites
-
-- Python 3.8 or higher
-- Chrome browser (for Selenium-based scraping)
-- Chrome WebDriver matching your Chrome version
+This application allows you to:
+- Scrape commercial real estate listings from various websites
+- Run the crawler on a schedule via a Windows service
+- View and filter results in a user-friendly GUI
+- Receive email notifications with new listings
 
 ## Installation
 
-1. Clone the repository:
-```
-git clone https://github.com/yourusername/commercial-realestate-crawler.git
-cd commercial-realestate-crawler
-```
-
-2. Create a virtual environment and activate it:
-```
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install required dependencies:
-```
-pip install -r requirements.txt
-```
-
-4. Run the application:
-```
-python main.py
-```
+1. Make sure you have Python 3.8 or higher installed
+2. Clone or download this repository
+3. Install required packages:
+   ```
+   pip install -r requirements.txt
+   ```
 
 ## Usage
 
-1. Select the property types you're interested in
-2. Enter an optional price range
-3. Verify the location is set to your desired area
-4. Select which websites to search
-5. Specify how many days back to search
-6. Optionally enter your email credentials for email notifications
-7. Click "Search Now" to execute the search
+### Starting the GUI
 
-## Email Configuration
+To start the application, run:
 
-For email functionality, you'll need to:
-1. Enter your email address
-2. Enter your email password or app password
-3. Check "Send Results by Email" to receive current search results
-4. Check "Save Email Credentials" to enable daily email reports
-
-**Note**: For Gmail, you may need to create an App Password if you have 2FA enabled. See Google's documentation on [App Passwords](https://support.google.com/accounts/answer/185833).
-
-## Scheduled Searches
-
-When credentials are saved, the application will run a daily search at 9 AM for new listings from the previous day based on your saved search parameters. You must keep the application running for this feature to work.
-
-## Extending
-
-To add support for additional real estate websites:
-
-1. Create a new scraper class in the `scraper` directory
-2. Inherit from `BaseScraper` and implement the `search` method
-3. Add the new scraper to the `scrapers` dictionary in `ScraperManager`
-
-## Selenium Scrapers
-
-The application includes Selenium-based scrapers for commercial real estate websites:
-
-### CommercialMLS Scraper
-
-The CommercialMLSScraper uses Selenium to automate searches on commercialmls.com with the following workflow:
-1. Navigates to commercialmls.com/search/
-2. Selects location by entering a city name
-3. Selects property types and "For Sale" filter
-4. Sets price range filters
-5. Sets date filters to find recent listings
-6. Extracts property information including title, address, price, and URL
-
-### LoopNet Scraper
-
-The ImprovedLoopNetScraper uses Selenium to automate searches on loopnet.com with the following workflow:
-1. Navigates to loopnet.com
-2. Enters location search
-3. Changes listing type to "For Sale"
-4. Selects appropriate property types
-5. Sets price range filters
-6. Uses "All Filters" to set date filters
-7. Extracts property information and handles popup dialogs
-
-### Usage
-
-Both scrapers are integrated with the main application through the ScraperManager. When you perform a search in the GUI, the scrapers run in parallel threads to collect listings from both websites simultaneously.
-
-To run the scrapers, you'll need to have Chrome installed as well as the appropriate ChromeDriver for your Chrome version.
-
-### Testing the Scrapers
-
-You can test the scrapers independently using the debug script:
-
-```bash
-python debug/test_scrapers.py
+```
+python launch_gui.py
 ```
 
-This will run both scrapers with sample search parameters and display the results.
+### Windows Service
+
+The application can run as a Windows service to perform scheduled crawling in the background, even when no user is logged in.
+
+#### Service Setup
+
+1. **Install the Service**:
+   Click the "Install Service" button in the GUI.
+   - This will request administrator privileges via a UAC prompt.
+   - The service will be installed on your system.
+
+2. **Start the Service**:
+   Click the "Start Service" button in the GUI.
+   - This will request administrator privileges via a UAC prompt.
+   - The service will start and run in the background.
+
+3. **Stop the Service**:
+   Click the "Stop Service" button in the GUI.
+   - This will request administrator privileges via a UAC prompt.
+   - The service will stop.
+
+4. **Remove the Service**:
+   Click the "Remove Service" button in the GUI.
+   - This will request administrator privileges via a UAC prompt.
+   - The service will be uninstalled from your system.
+
+### Manual Service Control
+
+You can control the service directly from the command line using either Python commands or the included batch file:
+
+#### Using Python:
+
+```
+# Install the service
+python -m service.service_controller install
+
+# Start the service
+python -m service.service_controller start
+
+# Stop the service
+python -m service.service_controller stop
+
+# Check service status
+python -m service.service_controller status
+
+# Remove the service
+python -m service.service_controller remove
+```
+
+#### Using the Batch File (Windows only):
+
+```
+# Install the service
+manage_service.bat install
+
+# Start the service
+manage_service.bat start
+
+# Stop the service
+manage_service.bat stop
+
+# Check service status
+manage_service.bat status
+
+# Remove the service
+manage_service.bat remove
+```
+
+## Configuration
+
+You can configure the crawler through the GUI:
+
+1. **Crawler Settings**:
+   - Websites to crawl
+   - Search criteria
+   - Frequency of crawling
+
+2. **Email Notifications**:
+   - Enable/disable email notifications
+   - Set up email credentials
+   - Configure recipients
+
+The configuration is saved in the `config/config.json` file.
+
+## Troubleshooting
+
+### Administrator Privileges
+
+All service operations (install, start, stop, remove) require administrator privileges. If you encounter permission errors:
+
+1. Make sure you're allowing the UAC prompts when requested
+2. Try running the application as administrator
+3. Check Windows Event Viewer for any service-related errors
+
+### Service Not Starting
+
+If the service fails to start:
+
+1. Check the service log in `debug/service.log`
+2. Verify that your Python environment has all required dependencies
+3. Make sure the service isn't already installed or running
+
+### Windows 10 Compatibility
+
+This application is designed to work with all modern versions of Windows including Windows 10 and Windows 11. The service management utility (`service_controller.py`) uses PowerShell commands to elevate privileges instead of relying on win32api/win32con.
+
+## Advanced Usage
+
+### Command Line Interface
+
+For advanced users, the crawler can be controlled via command line:
+
+```
+# Run the crawler directly (without service)
+python -m scraper.scraper_manager
+```
+
+## Development
+
+### Service Management
+
+The service management functionality has been simplified and consolidated:
+
+- All service management functions (install, remove, start, stop, status) are now in `service/service_controller.py`
+- Eliminated redundant files (`install_service.py` and `service_control.py`)
+- Added convenience batch file (`manage_service.bat`) for Windows users
+- Service functions are now exposed at the package level through `service/__init__.py`
+
+If you're upgrading from a previous version, you can run `cleanup.bat` to remove the obsolete files.
 
 ## License
 
-MIT
-
-## Disclaimer
-
-This application is for educational purposes only. Be sure to review and respect the terms of service for any website you interact with using this tool. 
+This project is licensed under the MIT License - see the LICENSE file for details. 

@@ -14,7 +14,9 @@ DEFAULT_CONFIG = {
     'days_back': 1,
     'save_credentials': False,
     'send_email': False,
-    'email': '',
-    'email_password': '',
-    'dark_mode': True
+    'dark_mode': True,
+    # New background task configuration options
+    'enable_background': False,
+    'background_time': '03:00',
+    'hide_terminal': True
 } 

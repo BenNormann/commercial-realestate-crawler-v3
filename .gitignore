@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,14 +15,24 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
+# Credentials and sensitive data
+login_cred.txt
+*.key
+*.pem
+credentials.json
+.crypt_key
+.commercialrealestate/
+userinfo.py
+
 # Virtual Environment
 venv/
-ENV/
 env/
+ENV/
 
 # IDE files
 .idea/
@@ -31,22 +40,27 @@ env/
 *.swp
 *.swo
 
-# Logs
+# Logs and databases
 *.log
+*.sql
+*.sqlite
+*.db
 
-# User config/credentials
-~/.commercialrealestate/
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+chromedriver.exe
 
 # Chrome driver
 chromedriver
-chromedriver.exe
 
-# OS specific
-.DS_Store
-Thumbs.db
-
-# Debug files
-debug/logs/*
-!debug/logs/.gitkeep
-debug/backups/*
-!debug/backups/.gitkeep 
+# GUI build files
+gui/node_modules/
+gui/build/ 

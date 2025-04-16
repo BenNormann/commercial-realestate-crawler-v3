@@ -38,11 +38,11 @@ class LoopNetScraper(BaseScraper):
     
     # Listing extraction selectors
     LISTING_SELECTORS = {
-        'address': "h4 a",
-        'location': "a.subtitle-beta",
-        'price': "li[name='Price']",
-        'property_type': "ul.data-points-2c li:nth-child(3)",
-        'details_link': "a[title*='More details']"
+        'address': "h4 a, a[title*='More details for']",
+        'location': "a.subtitle-beta, span.location",
+        'price': "li[name='Price'], span.price, div.price",
+        'property_type': "ul.data-points-2c li:nth-child(3), span.property-type",
+        'details_link': "#placardSec > div.placards > ul > li > article > div.placard-pseudo > a, a[title*='More details for']"
     }
     
     def __init__(self, debug_mode: bool = False):
@@ -261,6 +261,34 @@ class LoopNetScraper(BaseScraper):
         
         return results
     
+    def _extract_listing_details(self, card: Any, selectors: Dict[str, str]) -> Dict[str, str]:
+        """Extract listing details from a card element using provided selectors
+        
+        Args:
+            card: The BeautifulSoup card element
+            selectors: Dictionary mapping field names to CSS selectors
+            
+        Returns:
+            Dict[str, str]: Dictionary of extracted details
+        """
+        details = {}
+        for field, selector in selectors.items():
+            try:
+                element = card.select_one(selector)
+                if element:
+                    # Clean up the text
+                    text = element.text.strip()
+                    # Remove any extra whitespace
+                    text = ' '.join(text.split())
+                    details[field] = text
+                else:
+                    details[field] = f"{field} not available"
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Error extracting {field}: {str(e)}")
+                details[field] = f"{field} not available"
+        return details
+    
     def _extract_listings(self) -> List[Dict[str, Any]]:
         """Extract listing details from search results page"""
         listings = []
@@ -272,95 +300,44 @@ class LoopNetScraper(BaseScraper):
             page_source = self.driver.page_source
             soup = BeautifulSoup(page_source, 'html.parser')
             
-            # Based on the HTML structure, look for placard-content divs
-            placard_contents = soup.select("div.placard-content")
-            log_action(self.logger, f"Found {len(placard_contents)} placard-content elements")
+            # First try to find all listing links directly
+            detail_links = soup.select("a[title*='More details for']")
+            log_action(self.logger, f"Found {len(detail_links)} detail links directly")
             
-            # If no placard-content divs found, try alternative containers
-            if not placard_contents:
-                placard_contents = soup.select(".property-card, article.placard")
-                log_action(self.logger, f"Found {len(placard_contents)} alternative property cards")
-            
-            for card in placard_contents:
+            for link in detail_links:
                 try:
-                    # Extract listing URL - look for any "More details" links
-                    links = card.select(self.LISTING_SELECTORS['details_link'])
-                    if not links:
+                    if 'href' not in link.attrs:
                         continue
                         
-                    # Use the first link with an href attribute
-                    listing_url = None
-                    for link in links:
-                        if 'href' in link.attrs:
-                            listing_url = link['href']
-                            break
-                            
-                    if not listing_url or listing_url in processed_urls:
+                    listing_url = link['href']
+                    if listing_url in processed_urls:
                         continue
                         
                     processed_urls.add(listing_url)
                     
-                    # Extract details using the base class method
-                    details = self._extract_listing_details(card, self.LISTING_SELECTORS)
-                    
-                    # Combine address and location
-                    full_address = details['address']
-                    if full_address != "Address not available" and details['location']:
-                        full_address = f"{full_address}, {details['location']}"
-                    
-                    # Create listing
-                    listing = {
-                        'address': full_address,
-                        'price': details['price'],
-                        'property_type': details['property_type'],
-                        'url': listing_url
-                    }
-                    
-                    listings.append(listing)
-                    log_action(self.logger, f"Added listing: {full_address} at {listing_url}")
-                    
-                except Exception as e:
-                    self.logger.error(f"Error extracting listing from placard: {str(e)}")
-            
-            # If no listings found, try a more general approach
-            if not listings:
-                # Look for any "More details" links on the page
-                detail_links = soup.select("a[title*='More details for']")
-                log_action(self.logger, f"Found {len(detail_links)} detail links")
-                
-                for link in detail_links:
-                    try:
-                        if 'href' not in link.attrs:
-                            continue
-                            
-                        listing_url = link['href']
-                        if listing_url in processed_urls:
-                            continue
-                            
-                        processed_urls.add(listing_url)
+                    # Extract information from the title attribute
+                    title = link.get('title', '')
+                    if 'More details for ' in title:
+                        # Extract address and property type from title
+                        title_content = title.replace('More details for ', '')
+                        parts = title_content.split(' - ')
                         
-                        # Extract address from the title attribute
-                        full_address = "Address not available"
-                        if 'title' in link.attrs and 'More details for ' in link['title']:
-                            title_parts = link['title'].replace('More details for ', '').split(' - ')
-                            if title_parts:
-                                full_address = title_parts[0]
-                                # Try to extract type from title if available
-                                if len(title_parts) > 1 and 'for ' in title_parts[1]:
-                                    prop_type = title_parts[1].split('for ')[0].strip()
+                        full_address = parts[0] if parts else "Address not available"
+                        property_type = "Type not available"
                         
-                        # Try to find parent elements with price info
+                        # Try to extract property type from title
+                        if len(parts) > 1 and 'for ' in parts[1]:
+                            property_type = parts[1].split('for ')[0].strip()
+                        
+                        # Try to find price in nearby elements
                         price = "Price not available"
-                        prop_type = "Type not available"
-                        
-                        # Find any parent with price info
                         parent = link.parent
-                        for _ in range(4):  # Check a few levels up
+                        for _ in range(5):  # Check a few levels up
                             if not parent:
                                 break
                                 
-                            # Look for price
-                            price_elem = parent.select_one("[name='Price'], [class*='price']")
+                            # Look for price elements
+                            price_elem = parent.select_one("[name='Price'], [class*='price'], span.price, div.price")
                             if price_elem and price_elem.text and '$' in price_elem.text:
                                 price = price_elem.text.strip()
                                 break
@@ -371,15 +348,67 @@ class LoopNetScraper(BaseScraper):
                         listing = {
                             'address': full_address,
                             'price': price,
-                            'property_type': prop_type,
+                            'property_type': property_type,
                             'url': listing_url
                         }
                         
                         listings.append(listing)
-                        log_action(self.logger, f"Added listing from detail link: {full_address}")
+                        log_action(self.logger, f"Added listing from title: {full_address}")
+                        
+                except Exception as e:
+                    self.logger.error(f"Error extracting from link title: {str(e)}")
+            
+            # If no listings found, try the placard-content approach
+            if not listings:
+                # Based on the HTML structure, look for placard-content divs
+                placard_contents = soup.select("div.placard-content")
+                log_action(self.logger, f"Found {len(placard_contents)} placard-content elements")
+                
+                # If no placard-content divs found, try alternative containers
+                if not placard_contents:
+                    placard_contents = soup.select(".property-card, article.placard")
+                    log_action(self.logger, f"Found {len(placard_contents)} alternative property cards")
+                
+                for card in placard_contents:
+                    try:
+                        # Extract listing URL - look for any "More details" links
+                        links = card.select(self.LISTING_SELECTORS['details_link'])
+                        if not links:
+                            continue
+                            
+                        # Use the first link with an href attribute
+                        listing_url = None
+                        for link in links:
+                            if 'href' in link.attrs:
+                                listing_url = link['href']
+                                break
+                                
+                        if not listing_url or listing_url in processed_urls:
+                            continue
+                            
+                        processed_urls.add(listing_url)
+                        
+                        # Extract details using the class method
+                        details = self._extract_listing_details(card, self.LISTING_SELECTORS)
+                        
+                        # Combine address and location
+                        full_address = details['address']
+                        if full_address != "Address not available" and details['location']:
+                            full_address = f"{full_address}, {details['location']}"
+                        
+                        # Create listing
+                        listing = {
+                            'address': full_address,
+                            'price': details['price'],
+                            'property_type': details['property_type'],
+                            'url': listing_url
+                        }
+                        
+                        listings.append(listing)
+                        log_action(self.logger, f"Added listing from placard: {full_address}")
                         
                     except Exception as e:
-                        self.logger.error(f"Error extracting from detail link: {str(e)}")
+                        self.logger.error(f"Error extracting listing from placard: {str(e)}")
             
             # Last resort - use Selenium to find elements
             if not listings and self.driver:
