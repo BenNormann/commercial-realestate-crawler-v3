@@ -173,22 +173,11 @@ class TaskSchedulerManager:
             return False
     
     def get_email_credentials(self):
-        """Get email credentials from JSON file using same path logic as main config"""
+        """Get email credentials from JSON file"""
         try:
-            # Use EXACT SAME logic as GUI for ALL modes
-            task_manager_file = os.path.abspath(__file__)
-            absolute_project_root = os.path.dirname(os.path.dirname(task_manager_file))
-            absolute_config_dir = os.path.join(absolute_project_root, "config")
-            
-            email_credentials_file = os.path.join(absolute_config_dir, "email_credentials.json")
-            
+            email_credentials_file = os.path.join(CONFIG_DIR, "email_credentials.json")
             if os.path.exists(email_credentials_file):
                 with open(email_credentials_file, 'r') as f:
-                    data = json.load(f)
-                    return data.get('email', ''), data.get('password', '')
-            elif os.path.exists(os.path.join(CONFIG_DIR, "email_credentials.json")):
-                # Fallback to original path
-                with open(os.path.join(CONFIG_DIR, "email_credentials.json"), 'r') as f:
                     data = json.load(f)
                     return data.get('email', ''), data.get('password', '')
         except Exception as e:
@@ -200,18 +189,8 @@ class TaskSchedulerManager:
         try:
             from utils.email_sender import EmailSender
             
-            # Use EXACT SAME logic as GUI for ALL modes
-            task_manager_file = os.path.abspath(__file__)
-            absolute_project_root = os.path.dirname(os.path.dirname(task_manager_file))
-            absolute_config_dir = os.path.join(absolute_project_root, "config")
-            
-            absolute_config_file = os.path.join(absolute_config_dir, "config.json")
-            
             # Load configuration to check if email is enabled
-            if os.path.exists(absolute_config_file):
-                with open(absolute_config_file, 'r') as f:
-                    user_config = json.load(f)
-            elif os.path.exists(CONFIG_FILE):
+            if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, 'r') as f:
                     user_config = json.load(f)
             else:
