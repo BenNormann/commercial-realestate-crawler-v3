@@ -38,10 +38,14 @@ from PyQt5.QtGui import QColor, QIcon, QFont, QPalette
 from task_scheduler.task_manager import TaskSchedulerManager
 from scraper.scraper_manager import ScraperManager
 from utils.email_sender import EmailSender
-import userinfo
-
 # Configuration constants
-CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
+if getattr(sys, 'frozen', False):
+    # Running as executable - use directory where exe is located
+    exe_dir = os.path.dirname(sys.executable)
+    CONFIG_DIR = os.path.join(exe_dir, "config")
+else:
+    # Running as script - use directory containing this file's parent
+    CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
 # Default configuration
@@ -151,10 +155,17 @@ class MainWindow(QMainWindow):
         self.setup_status_checker()
         
         # Auto-save and schedule if requested (after restart with admin)
-        if self.auto_save and self.is_admin():
-            logger.info("Auto-save requested and running with admin privileges - scheduling save operation")
-            # Use QTimer to ensure UI is fully loaded before auto-saving
-            QTimer.singleShot(1000, self.auto_save_and_schedule)
+        if self.auto_save:
+            if self.is_admin():
+                logger.info("Auto-save requested and running with admin privileges - scheduling save operation")
+                # Use QTimer to ensure UI is fully loaded before auto-saving
+                QTimer.singleShot(1000, self.auto_save_and_schedule)
+            else:
+                logger.warning("Auto-save requested but not running with admin privileges")
+                QTimer.singleShot(1000, lambda: QMessageBox.information(
+                    self, "Auto-Save Notice", 
+                    "Auto-save was requested but administrator privileges are not available.\n\nPlease manually save your settings."
+                ))
     
     def load_config(self):
         """Load configuration from file"""
@@ -1004,15 +1015,21 @@ class MainWindow(QMainWindow):
                 # Running as compiled executable
                 exe_path = sys.executable
                 parameters = "--auto-save"
+                if self.debug_mode:
+                    parameters += " --debug"
             else:
                 # Running as script - always use the launcher
                 launcher_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'launch_gui.py')
                 exe_path = sys.executable
                 if os.path.exists(launcher_path):
                     parameters = f'"{launcher_path}" --auto-save'
+                    if self.debug_mode:
+                        parameters += " --debug"
                 else:
                     # If launcher doesn't exist, use current script directly
                     parameters = f'"{os.path.abspath(__file__)}" --auto-save'
+                    if self.debug_mode:
+                        parameters += " --debug"
             
             logger.info(f"Attempting to restart with admin: {exe_path} {parameters}")
             
@@ -1076,7 +1093,7 @@ class MainWindow(QMainWindow):
                 self.add_scheduled_time(time_str)
             
             # Email settings
-            email, password = userinfo.get_email_credentials()
+            email, password = self.get_email_credentials()
             self.email_edit.setText(email)
             self.email_password_edit.setText(password)
             self.send_email_cb.setChecked(self.user_config.get('send_email', False))
@@ -1524,9 +1541,22 @@ class MainWindow(QMainWindow):
                     self.save_credentials_cb.setChecked(False)  # Uncheck if validation fails
                     return
                 
-                # Save credentials to userinfo.py
-                userinfo.set_email_credentials(email, password)
-                QMessageBox.information(self, "Success", "Email credentials saved successfully!\n\nScheduled emails will now work when scraping completes.")
+                # Save credentials to JSON file
+                try:
+                    success = self.set_email_credentials(email, password)
+                    if success:
+                        logger.info(f"Email credentials saved successfully for {email}")
+                        QMessageBox.information(self, "Success", "Email credentials saved successfully!\n\nScheduled emails will now work when scraping completes.")
+                    else:
+                        logger.error("Failed to save email credentials: Unknown error")
+                        QMessageBox.warning(self, "Error", "Failed to save email credentials. Please check file permissions.")
+                        self.save_credentials_cb.setChecked(False)
+                        return
+                except Exception as save_error:
+                    logger.error(f"Failed to save email credentials: {str(save_error)}")
+                    QMessageBox.warning(self, "Error", f"Failed to save email credentials: {str(save_error)}")
+                    self.save_credentials_cb.setChecked(False)
+                    return
                 
             else:
                 # Clear credentials
@@ -1534,7 +1564,7 @@ class MainWindow(QMainWindow):
                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 
                 if reply == QMessageBox.Yes:
-                    userinfo.set_email_credentials("", "")
+                    self.set_email_credentials("", "")
                     QMessageBox.information(self, "Cleared", "Email credentials cleared.\n\nScheduled emails will not work until credentials are saved again.")
                 else:
                     self.save_credentials_cb.setChecked(True)  # Recheck if user cancels
@@ -1544,6 +1574,40 @@ class MainWindow(QMainWindow):
             logger.error(f"Error toggling email credentials: {str(e)}")
             QMessageBox.critical(self, "Error", f"Error with email credentials: {str(e)}")
             self.save_credentials_cb.setChecked(False)  # Reset on error
+
+    def get_email_credentials(self):
+        """Get email credentials from JSON file using same path logic as main config"""
+        try:
+            email_credentials_file = os.path.join(CONFIG_DIR, "email_credentials.json")
+            if os.path.exists(email_credentials_file):
+                with open(email_credentials_file, 'r') as f:
+                    data = json.load(f)
+                    return data.get('email', ''), data.get('password', '')
+        except Exception as e:
+            logger.error(f"Error reading email credentials: {e}")
+        return '', ''
+    
+    def set_email_credentials(self, email, password):
+        """Save email credentials to JSON file using same path logic as main config"""
+        try:
+            # Use same directory creation logic as main config
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            email_credentials_file = os.path.join(CONFIG_DIR, "email_credentials.json")
+            
+            data = {
+                'email': email,
+                'password': password
+            }
+            
+            with open(email_credentials_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            logger.info(f"Email credentials saved successfully to {email_credentials_file}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving email credentials: {e}")
+            return False
 
     def show_app_password_help(self):
         """Show help dialog for app password setup"""
@@ -1578,10 +1642,9 @@ class MainWindow(QMainWindow):
     def refresh_results(self):
         """Refresh the results display with detailed listing information"""
         try:
-            results_text = ""
-            
             # Look for latest results file
             latest_results_file = os.path.join(CONFIG_DIR, "latest_results.json")
+            
             if os.path.exists(latest_results_file):
                 try:
                     with open(latest_results_file, 'r') as f:
@@ -1591,15 +1654,6 @@ class MainWindow(QMainWindow):
                     total_results = data.get('total_results', 0)
                     run_time = data.get('datetime', 'Unknown')
                     trigger = data.get('trigger', 'Unknown')
-                    
-                    # DEBUG: Log what we're actually getting
-                    logger.info(f"DEBUG: results type = {type(results)}")
-                    logger.info(f"DEBUG: results = {results}")
-                    if isinstance(results, dict):
-                        for website, website_results in results.items():
-                            logger.info(f"DEBUG: {website} has {len(website_results) if website_results else 0} results")
-                            if website_results and len(website_results) > 0:
-                                logger.info(f"DEBUG: First listing for {website}: {website_results[0]}")
                     
                     results_text = self.format_results_text(results, total_results, run_time, trigger)
                     
@@ -1708,7 +1762,7 @@ class MainWindow(QMainWindow):
                 return
             
             # Check if credentials are saved
-            email, password = userinfo.get_email_credentials()
+            email, password = self.get_email_credentials()
             if not email or not password:
                 logger.warning("Email credentials not configured, skipping email send")
                 return
@@ -1846,10 +1900,29 @@ def main():
     import sys
     import argparse
     
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Commercial Real Estate Crawler GUI")
-    parser.add_argument('--auto-save', action='store_true', help='Automatically save and schedule after startup (used after admin restart)')
-    args = parser.parse_args()
+    # Parse command line arguments safely for executable
+    try:
+        parser = argparse.ArgumentParser(description="Commercial Real Estate Crawler GUI")
+        parser.add_argument('--auto-save', action='store_true', help='Automatically save and schedule after startup (used after admin restart)')
+        parser.add_argument('--execute-scraping', action='store_true', help='Execute scheduled scraping (called by Task Scheduler)')
+        args = parser.parse_args()
+        auto_save = args.auto_save
+        execute_scraping = args.execute_scraping
+    except (SystemExit, AttributeError):
+        # Handle argparse errors in executable mode
+        auto_save = '--auto-save' in sys.argv
+        execute_scraping = '--execute-scraping' in sys.argv
+    
+    # If called by Task Scheduler to execute scraping, don't start GUI
+    if execute_scraping:
+        try:
+            from task_scheduler.task_manager import TaskSchedulerManager
+            manager = TaskSchedulerManager()
+            success = manager.execute_scraping()
+            sys.exit(0 if success else 1)
+        except Exception as e:
+            print(f"Error during scheduled scraping: {e}")
+            sys.exit(1)
     
     # More aggressive Qt MIME database fix - set before any Qt operations
     os.environ['QT_LOGGING_RULES'] = 'qt.qpa.mime=false'
@@ -1876,7 +1949,7 @@ def main():
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     
-    window = MainWindow(auto_save=args.auto_save)
+    window = MainWindow(auto_save=auto_save)
     window.show()
     
     sys.exit(app.exec_()) 

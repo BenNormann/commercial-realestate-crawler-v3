@@ -144,7 +144,7 @@ The executable will be created in `dist/CommercialRealEstateCrawler.exe`
 ## 🔧 Configuration Files
 
 - `config/config.json`: Main application settings (auto-saved)
-- `userinfo.py`: Email credentials (excluded from executable builds)
+- `config/email_credentials.json`: Email credentials storage
 - `config/latest_results.json`: Most recent search results
 - `debug/*.log`: Application logs
 

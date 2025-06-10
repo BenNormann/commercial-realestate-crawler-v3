@@ -14,7 +14,13 @@ from debug.logger import setup_logger
 from scraper.scraper_manager import ScraperManager
 
 # Configuration constants
-CONFIG_DIR = os.path.join(project_root, "config")
+if getattr(sys, 'frozen', False):
+    # Running as executable - use directory where exe is located
+    exe_dir = os.path.dirname(sys.executable)
+    CONFIG_DIR = os.path.join(exe_dir, "config")
+else:
+    # Running as script - use project root
+    CONFIG_DIR = os.path.join(project_root, "config")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
 logger = setup_logger("task_scheduler")
@@ -24,86 +30,100 @@ class TaskSchedulerManager:
     
     def __init__(self):
         self.task_name = "CommercialRealEstateScraper"
-        # Use pythonw.exe for scheduled tasks to avoid console window
-        # Handle both regular python and anaconda/conda installations
-        current_exe = sys.executable
-        if current_exe.endswith('python.exe'):
-            self.python_exe = current_exe.replace('python.exe', 'pythonw.exe')
-        elif 'anaconda' in current_exe.lower() or 'conda' in current_exe.lower():
-            # For anaconda/conda, find pythonw.exe in the same directory
-            python_dir = os.path.dirname(current_exe)
-            pythonw_path = os.path.join(python_dir, 'pythonw.exe')
-            if os.path.exists(pythonw_path):
-                self.python_exe = pythonw_path
-            else:
-                self.python_exe = current_exe  # fallback to python.exe
+        
+        # CRITICAL: When running as EXE, scheduled task must run the EXE, not extracted Python files
+        if getattr(sys, 'frozen', False):
+            # Running as EXE - Task should run the EXE with argument, not extracted Python files
+            self.command = sys.executable  # Path to the actual EXE file
+            self.arguments = "--execute-scraping"
         else:
-            self.python_exe = current_exe
-        # Point to this task manager file instead of a separate script
-        self.script_path = os.path.abspath(__file__)
+            # Running as script - Task should run Python with this file
+            current_exe = sys.executable
+            if current_exe.endswith('python.exe'):
+                self.command = current_exe.replace('python.exe', 'pythonw.exe')
+            elif 'anaconda' in current_exe.lower() or 'conda' in current_exe.lower():
+                python_dir = os.path.dirname(current_exe)
+                pythonw_path = os.path.join(python_dir, 'pythonw.exe')
+                if os.path.exists(pythonw_path):
+                    self.command = pythonw_path
+                else:
+                    self.command = current_exe
+            else:
+                self.command = current_exe
+            self.arguments = f'"{os.path.abspath(__file__)}" --execute-scraping'
         
-    def execute_scraping(self) -> bool:
-        """Direct execution of scraping logic using ScraperManager - matches GUI execution"""
-        logger = setup_logger("task_runner")
-        
+    def run_scraping(self):
+        """Run scheduled scraping - called by Windows Task Scheduler"""
+        logger.info("=== Running scheduled scraping ===")
+        return self.execute_scraping()
+    
+    def execute_scraping(self):
+        """Execute the scraping operation using configuration file"""
         try:
-            logger.info("=== Scheduled scraping started ===")
-            logger.info(f"Python executable: {sys.executable}")
-            logger.info(f"Working directory: {os.getcwd()}")
-            logger.info(f"Project root: {project_root}")
-            logger.info(f"Config file path: {CONFIG_FILE}")
+            logger.info("Starting scheduled scraping execution")
             
-            # Load configuration from the same file as GUI
-            if os.path.exists(CONFIG_FILE):
+            # Load configuration using EXACT SAME logic as GUI for ALL modes
+            task_manager_file = os.path.abspath(__file__)
+            absolute_project_root = os.path.dirname(os.path.dirname(task_manager_file))
+            absolute_config_dir = os.path.join(absolute_project_root, "config")
+            absolute_config_file = os.path.join(absolute_config_dir, "config.json")
+            
+            # Load user configuration
+            user_config = None
+            if os.path.exists(absolute_config_file):
+                logger.info(f"Loading config from: {absolute_config_file}")
+                with open(absolute_config_file, 'r') as f:
+                    user_config = json.load(f)
+            elif os.path.exists(CONFIG_FILE):
+                logger.info(f"Loading config from fallback: {CONFIG_FILE}")
                 with open(CONFIG_FILE, 'r') as f:
                     user_config = json.load(f)
-                logger.info("Configuration loaded successfully")
             else:
-                logger.error("Configuration file not found")
+                logger.error("No configuration file found - cannot run scheduled scraping")
                 return False
             
-            # Check if background service is enabled
-            if not user_config.get('enable_background', False):
-                logger.info("Background service is disabled, skipping scheduled run")
-                return False
+            logger.info(f"Loaded config: {user_config}")
             
-            # Get search parameters - exactly like GUI does it
+            # Extract search parameters from config
             property_types = []
-            for pt in user_config.get('property_types', []):
-                property_types.append(pt.lower())
+            saved_types = user_config.get('property_types', [])
+            for prop_type in saved_types:
+                # Handle legacy "Investment" -> "Multifamily" mapping
+                if prop_type == 'Investment':
+                    property_types.append('multifamily')
+                else:
+                    property_types.append(prop_type.lower())
             
             location = user_config.get('location', '').strip()
-            min_price = user_config.get('min_price', '').strip() or None
-            max_price = user_config.get('max_price', '').strip() or None
-            
-            # Map website names consistently with GUI
-            websites = []
-            config_websites = user_config.get('websites', [])
-            for website in config_websites:
-                if website == 'commercialmls.com':
-                    websites.append('commercialmls.com')
-                elif website == 'loopnet.com':
-                    websites.append('loopnet.com')
-                # Handle any legacy naming
-                elif website.lower() == 'realcommercial':
-                    websites.append('loopnet.com')
-                elif website.lower() == 'commercialrealestate':
-                    websites.append('commercialmls.com')
-            
+            min_price = user_config.get('min_price', '') or None
+            max_price = user_config.get('max_price', '') or None
+            websites = user_config.get('websites', [])
             days_back = user_config.get('days_back', 1)
             
-            # Validate parameters - same as GUI
-            if not location or not property_types or not websites:
-                logger.error(f"Missing required search parameters: location={location}, types={property_types}, websites={websites}")
+            # Validate configuration
+            if not location:
+                logger.error("No location specified in configuration")
+                return False
+            if not property_types:
+                logger.error("No property types specified in configuration")
+                return False
+            if not websites:
+                logger.error("No websites specified in configuration")
                 return False
             
-            # Calculate start date - same as GUI
+            logger.info(f"Scheduled scraping parameters:")
+            logger.info(f"  Location: {location}")
+            logger.info(f"  Property Types: {property_types}")
+            logger.info(f"  Websites: {websites}")
+            logger.info(f"  Price Range: {min_price} - {max_price}")
+            logger.info(f"  Days Back: {days_back}")
+            
+            # Calculate start date
             start_date = datetime.now() - timedelta(days=days_back)
             
-            logger.info(f"Running scraping with config: location={location}, types={property_types}, websites={websites}")
-            
-            # Execute search using ScraperManager - same as GUI (with debug_mode=False for scheduled runs)
+            # Execute search using ScraperManager
             manager = ScraperManager(debug_mode=False)
+            logger.info("Executing scraper search...")
             results = manager.search(
                 property_types=property_types,
                 location=location,
@@ -113,7 +133,7 @@ class TaskSchedulerManager:
                 websites=websites
             )
             
-            # Save latest results - exactly like GUI does it
+            # Calculate total results
             total_results = 0
             if isinstance(results, dict):
                 for website, website_results in results.items():
@@ -124,38 +144,74 @@ class TaskSchedulerManager:
                 total_results = len(results) if results else 0
                 logger.info(f"Found {total_results} total results")
             
-            # Save to single latest results file (overwrite each time) - same as GUI
+            # Save to latest results file using same pattern as GUI
             os.makedirs(CONFIG_DIR, exist_ok=True)
             latest_results_file = os.path.join(CONFIG_DIR, "latest_results.json")
+            results_data = {
+                "results": results,
+                "total_results": total_results,
+                "datetime": datetime.now().isoformat(),
+                "trigger": "scheduled"
+            }
+            
             with open(latest_results_file, 'w') as f:
-                json.dump({
-                    "results": results,
-                    "total_results": total_results,
-                    "datetime": datetime.now().isoformat(),
-                    "trigger": "scheduled"
-                }, f, indent=2, default=str)
-            
-            # Send email notification if configured
-            self.send_email_notification(results, total_results)
-            
+                json.dump(results_data, f, indent=2, default=str)
             logger.info(f"=== Scheduled scraping completed successfully! Total results: {total_results} ===")
+            
+            # Send email notification if enabled
+            try:
+                self.send_email_notification(results, total_results)
+            except Exception as e:
+                logger.error(f"Error sending email notification: {str(e)}")
+            
             return True
             
         except Exception as e:
-            logger.error(f"Error during scheduled scraping: {str(e)}")
+            logger.error(f"Error during scheduled scraping execution: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             return False
     
+    def get_email_credentials(self):
+        """Get email credentials from JSON file using same path logic as main config"""
+        try:
+            # Use EXACT SAME logic as GUI for ALL modes
+            task_manager_file = os.path.abspath(__file__)
+            absolute_project_root = os.path.dirname(os.path.dirname(task_manager_file))
+            absolute_config_dir = os.path.join(absolute_project_root, "config")
+            
+            email_credentials_file = os.path.join(absolute_config_dir, "email_credentials.json")
+            
+            if os.path.exists(email_credentials_file):
+                with open(email_credentials_file, 'r') as f:
+                    data = json.load(f)
+                    return data.get('email', ''), data.get('password', '')
+            elif os.path.exists(os.path.join(CONFIG_DIR, "email_credentials.json")):
+                # Fallback to original path
+                with open(os.path.join(CONFIG_DIR, "email_credentials.json"), 'r') as f:
+                    data = json.load(f)
+                    return data.get('email', ''), data.get('password', '')
+        except Exception as e:
+            logger.error(f"Error reading email credentials: {e}")
+        return '', ''
+
     def send_email_notification(self, results, total_results):
         """Send email notification for scheduled run results"""
         try:
-            # Import userinfo and email sender
-            import userinfo
             from utils.email_sender import EmailSender
             
+            # Use EXACT SAME logic as GUI for ALL modes
+            task_manager_file = os.path.abspath(__file__)
+            absolute_project_root = os.path.dirname(os.path.dirname(task_manager_file))
+            absolute_config_dir = os.path.join(absolute_project_root, "config")
+            
+            absolute_config_file = os.path.join(absolute_config_dir, "config.json")
+            
             # Load configuration to check if email is enabled
-            if os.path.exists(CONFIG_FILE):
+            if os.path.exists(absolute_config_file):
+                with open(absolute_config_file, 'r') as f:
+                    user_config = json.load(f)
+            elif os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, 'r') as f:
                     user_config = json.load(f)
             else:
@@ -168,7 +224,7 @@ class TaskSchedulerManager:
                 return
             
             # Check if credentials are saved
-            email, password = userinfo.get_email_credentials()
+            email, password = self.get_email_credentials()
             if not email or not password:
                 logger.warning("Email credentials not configured, skipping email send")
                 return
@@ -397,6 +453,14 @@ To stop receiving these emails, uncheck 'Send email notifications' in the applic
     def install_task(self) -> bool:
         """Create the basic scheduled task (disabled by default)"""
         try:
+            # Set appropriate working directory
+            if getattr(sys, 'frozen', False):
+                # When running as EXE, use the directory containing the EXE
+                working_dir = os.path.dirname(self.command)
+            else:
+                # When running as script, use project root
+                working_dir = project_root
+
             # Create a basic task (disabled initially)
             xml_content = f'''<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -428,9 +492,9 @@ To stop receiving these emails, uncheck 'Send email notifications' in the applic
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>"{self.python_exe}"</Command>
-      <Arguments>"{self.script_path}" --execute-scraping</Arguments>
-      <WorkingDirectory>{project_root}</WorkingDirectory>
+      <Command>"{self.command}"</Command>
+      <Arguments>{self.arguments}</Arguments>
+      <WorkingDirectory>{working_dir}</WorkingDirectory>
     </Exec>
   </Actions>
 </Task>'''
@@ -491,6 +555,14 @@ To stop receiving these emails, uncheck 'Send email notifications' in the applic
       </ScheduleByDay>
     </CalendarTrigger>'''
             
+            # Set appropriate working directory  
+            if getattr(sys, 'frozen', False):
+                # When running as EXE, use the directory containing the EXE
+                working_dir = os.path.dirname(self.command)
+            else:
+                # When running as script, use project root
+                working_dir = project_root
+
             # Create new task with triggers
             xml_content = f'''<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -523,9 +595,9 @@ To stop receiving these emails, uncheck 'Send email notifications' in the applic
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>"{self.python_exe}"</Command>
-      <Arguments>"{self.script_path}" --execute-scraping</Arguments>
-      <WorkingDirectory>{project_root}</WorkingDirectory>
+      <Command>"{self.command}"</Command>
+      <Arguments>{self.arguments}</Arguments>
+      <WorkingDirectory>{working_dir}</WorkingDirectory>
     </Exec>
   </Actions>
 </Task>'''

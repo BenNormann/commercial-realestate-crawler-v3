@@ -64,7 +64,7 @@ hiddenimports = [
     'os',
     'sys',
     'pathlib',
-    'userinfo',
+
     'debug.logger',
     'scraper.scraper_manager',
     'scraper.loopnet_scraper',

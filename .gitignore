@@ -28,6 +28,7 @@ credentials.json
 .crypt_key
 .commercialrealestate/
 config/config.json
+config/email_credentials.json
 userinfo copy.py
 
 # Virtual Environment
