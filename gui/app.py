@@ -40,9 +40,10 @@ from scraper.scraper_manager import ScraperManager
 from utils.email_sender import EmailSender
 # Configuration constants
 if getattr(sys, 'frozen', False):
-    # Running as executable - use directory where exe is located
-    exe_dir = os.path.dirname(sys.executable)
-    CONFIG_DIR = os.path.join(exe_dir, "config")
+    # Running as executable - use AppData for self-contained behavior
+    import os
+    appdata_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "CommercialRealEstateCrawler")
+    CONFIG_DIR = appdata_dir
 else:
     # Running as script - use directory containing this file's parent
     CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
@@ -219,7 +220,7 @@ class MainWindow(QMainWindow):
                 background-color: #3c3c3c;
                 border: 2px solid #555555;
                 border-radius: 6px;
-                padding: 8px;
+                padding: 4px 8px;
                 color: #ffffff;
                 font-size: 11px;
                 selection-background-color: #6EA6BC;
@@ -475,7 +476,7 @@ class MainWindow(QMainWindow):
                 background-color: #ffffff;
                 border: 2px solid #cccccc;
                 border-radius: 6px;
-                padding: 8px;
+                padding: 2px 8px;
                 color: #333333;
                 font-size: 11px;
                 selection-background-color: #6EA6BC;
@@ -935,6 +936,31 @@ class MainWindow(QMainWindow):
         email_layout.addRow("", self.save_credentials_cb)
         
         layout.addWidget(email_group)
+        
+        # Uninstall/Reset Section
+        uninstall_group = QGroupBox("Uninstall / Reset")
+        uninstall_layout = QFormLayout(uninstall_group)
+        
+        # Uninstall buttons
+        uninstall_buttons = QWidget()
+        uninstall_buttons_layout = QHBoxLayout(uninstall_buttons)
+        uninstall_buttons_layout.setContentsMargins(0, 0, 0, 0)        
+        
+        # Full uninstall
+        self.full_uninstall_btn = QPushButton("🗑️ Complete Uninstall")
+        self.full_uninstall_btn.setStyleSheet("QPushButton { background-color: #BC6E8A; } QPushButton:hover { background-color: #A85A76; } QPushButton:pressed { background-color: #8A4A62; }")
+        self.full_uninstall_btn.clicked.connect(self.full_uninstall)
+        uninstall_buttons_layout.addWidget(self.full_uninstall_btn)
+        
+        uninstall_layout.addRow(uninstall_buttons)
+        
+        # Info label
+        info_label = QLabel("Complete Uninstall removes: scheduled task, all settings, email credentials, and saved results.")
+        info_label.setStyleSheet("QLabel { font-size: 10px; color: #888888; }")
+        info_label.setWordWrap(True)
+        uninstall_layout.addRow("", info_label)
+        
+        layout.addWidget(uninstall_group)
         layout.addStretch()
         
         self.tab_widget.addTab(config_widget, "Configuration")
@@ -1061,13 +1087,12 @@ class MainWindow(QMainWindow):
     def load_values(self):
         """Load configuration values into UI elements"""
         try:
-            # Property types (handle both old "Investment" and new "Multifamily" for config compatibility)
+            # Property types
             property_types = self.user_config.get('property_types', [])
             self.office_cb.setChecked('Office' in property_types)
             self.retail_cb.setChecked('Retail' in property_types)
             self.industrial_cb.setChecked('Industrial' in property_types)
-            # Handle both old "Investment" configs and new "Multifamily"
-            self.multifamily_cb.setChecked('Multifamily' in property_types or 'Investment' in property_types)
+            self.multifamily_cb.setChecked('Multifamily' in property_types)
             
             # Location
             self.location_edit.setText(self.user_config.get('location', ''))
@@ -1881,7 +1906,94 @@ To stop receiving these emails, uncheck 'Send email notifications' in the applic
         except Exception as e:
             logger.error(f"Error refreshing logs: {str(e)}")
             self.logs_text.setPlainText(f"Error loading logs: {str(e)}")
-    
+
+    def full_uninstall(self):
+        """Complete uninstall - remove everything"""
+        try:
+            reply = QMessageBox.question(
+                self, 
+                "Complete Uninstall", 
+                "⚠️ WARNING: This will completely remove ALL data!\n\n"
+                "This will delete:\n"
+                "• Windows scheduled task\n"
+                "• All configuration settings\n"
+                "• Email credentials\n" 
+                "• Saved search results\n"
+                "• All application data\n\n"
+                "This action CANNOT be undone!\n\n"
+                "Are you absolutely sure?",
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Double confirmation for safety
+                confirm_reply = QMessageBox.question(
+                    self,
+                    "Final Confirmation",
+                    "Last chance to cancel!\n\n"
+                    "Click YES to permanently delete all application data.\n"
+                    "Click NO to cancel and keep your data.",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if confirm_reply == QMessageBox.Yes:
+                    self.perform_full_uninstall()
+                    
+        except Exception as e:
+            logger.error(f"Error during uninstall: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Error during uninstall: {str(e)}")
+
+    def perform_full_uninstall(self):
+        """Actually perform the full uninstall"""
+        errors = []
+        
+        try:
+            # 1. Remove scheduled task
+            try:
+                if self.task_manager.delete_task():
+                    logger.info("Scheduled task removed successfully")
+                else:
+                    logger.info("No scheduled task found to remove")
+            except Exception as e:
+                logger.error(f"Error removing scheduled task: {str(e)}")
+                errors.append(f"Scheduled task: {str(e)}")
+            
+            # 2. Delete entire config directory (AppData folder)
+            try:
+                import shutil
+                if os.path.exists(CONFIG_DIR):
+                    shutil.rmtree(CONFIG_DIR)
+                    logger.info(f"Deleted config directory: {CONFIG_DIR}")
+                else:
+                    logger.info("No config directory found to delete")
+            except Exception as e:
+                logger.error(f"Error deleting config directory: {str(e)}")
+                errors.append(f"Config directory: {str(e)}")
+            
+            # 3. Show results
+            if errors:
+                error_text = "Uninstall completed with some errors:\n\n" + "\n".join([f"• {error}" for error in errors])
+                QMessageBox.warning(self, "Uninstall Complete (with errors)", error_text)
+            else:
+                QMessageBox.information(
+                    self, 
+                    "Uninstall Complete", 
+                    "✅ Complete uninstall successful!\n\n"
+                    "All application data has been removed:\n"
+                    f"• Deleted: {CONFIG_DIR}\n"
+                    "• Removed scheduled task\n\n"
+                    "The application will now close."
+                )
+            
+            # 4. Close the application after uninstall
+            QTimer.singleShot(2000, self.close)  # Close after 2 seconds
+            
+        except Exception as e:
+            logger.error(f"Critical error during uninstall: {str(e)}")
+            QMessageBox.critical(self, "Uninstall Error", f"Critical error during uninstall: {str(e)}")
+
     def closeEvent(self, event):
         """Handle application close event"""
         try:

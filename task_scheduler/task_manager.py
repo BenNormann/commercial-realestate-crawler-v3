@@ -15,9 +15,10 @@ from scraper.scraper_manager import ScraperManager
 
 # Configuration constants
 if getattr(sys, 'frozen', False):
-    # Running as executable - use directory where exe is located
-    exe_dir = os.path.dirname(sys.executable)
-    CONFIG_DIR = os.path.join(exe_dir, "config")
+    # Running as executable - use AppData for self-contained behavior
+    import os
+    appdata_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "CommercialRealEstateCrawler")
+    CONFIG_DIR = appdata_dir
 else:
     # Running as script - use project root
     CONFIG_DIR = os.path.join(project_root, "config")
@@ -58,7 +59,7 @@ class TaskSchedulerManager:
         return self.execute_scraping()
     
     def execute_scraping(self):
-        """Execute the scraping operation using configuration file"""
+        """Execute the scraping operation using configuration file - matches app.py run_scraper_directly logic"""
         try:
             logger.info("Starting scheduled scraping execution")
             
@@ -84,28 +85,40 @@ class TaskSchedulerManager:
             
             logger.info(f"Loaded config: {user_config}")
             
-            # Extract search parameters from config
+            # Extract search parameters from config - matching app.py logic exactly
             property_types = []
             saved_types = user_config.get('property_types', [])
             for prop_type in saved_types:
-                # Handle legacy "Investment" -> "Multifamily" mapping
-                if prop_type == 'Investment':
+                if prop_type == 'Office':
+                    property_types.append('office')
+                elif prop_type == 'Retail':
+                    property_types.append('retail')
+                elif prop_type == 'Industrial':
+                    property_types.append('industrial')
+                elif prop_type == 'Multifamily':
                     property_types.append('multifamily')
                 else:
                     property_types.append(prop_type.lower())
             
             location = user_config.get('location', '').strip()
-            min_price = user_config.get('min_price', '') or None
-            max_price = user_config.get('max_price', '') or None
+            
+            # Handle price range - ensure proper conversion from config strings
+            min_price_str = str(user_config.get('min_price', '')).strip()
+            max_price_str = str(user_config.get('max_price', '')).strip()
+            min_price = min_price_str if min_price_str else None
+            max_price = max_price_str if max_price_str else None
+            
+            # Build websites list - matching what scraper_manager expects
             websites = user_config.get('websites', [])
+            
             days_back = user_config.get('days_back', 1)
             
-            # Validate configuration
+            # Validate configuration - matching app.py validation
             if not location:
                 logger.error("No location specified in configuration")
                 return False
             if not property_types:
-                logger.error("No property types specified in configuration")
+                logger.error("No property types specified in configuration") 
                 return False
             if not websites:
                 logger.error("No websites specified in configuration")
@@ -118,10 +131,10 @@ class TaskSchedulerManager:
             logger.info(f"  Price Range: {min_price} - {max_price}")
             logger.info(f"  Days Back: {days_back}")
             
-            # Calculate start date
+            # Calculate start date - matching app.py logic
             start_date = datetime.now() - timedelta(days=days_back)
             
-            # Execute search using ScraperManager
+            # Execute search using ScraperManager - same as app.py
             manager = ScraperManager(debug_mode=False)
             logger.info("Executing scraper search...")
             results = manager.search(
@@ -133,7 +146,7 @@ class TaskSchedulerManager:
                 websites=websites
             )
             
-            # Calculate total results
+            # Calculate total results - matching app.py logic
             total_results = 0
             if isinstance(results, dict):
                 for website, website_results in results.items():
