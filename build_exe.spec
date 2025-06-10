@@ -7,6 +7,13 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 # Get the project root directory
 project_root = os.path.abspath('.')
 
+# Check if icon file exists
+icon_path = os.path.join(project_root, 'v3icon.ico')
+print(f"Looking for icon at: {icon_path}")
+print(f"Icon exists: {os.path.exists(icon_path)}")
+if not os.path.exists(icon_path):
+    print("WARNING: Icon file not found! The executable will not have a custom icon.")
+
 # Collect all data files
 datas = []
 
@@ -22,6 +29,10 @@ if os.path.exists(config_dir):
 chromedriver_path = os.path.join(project_root, 'chromedriver.exe')
 if os.path.exists(chromedriver_path):
     datas.append((chromedriver_path, '.'))
+
+# Add icon file for runtime use
+if os.path.exists(icon_path):
+    datas.append((icon_path, '.'))
 
 # Add any other data files you might have
 # datas.append((os.path.join(project_root, 'assets'), 'assets'))
@@ -108,7 +119,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='CommercialRealEstateCrawler',
+    name='Commercial Real Estate Crawler v3',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -120,5 +131,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path here if you have one: icon='path/to/icon.ico'
+    icon=icon_path,  # Absolute path to v3icon.ico
 ) 

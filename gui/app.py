@@ -117,6 +117,18 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Commercial Real Estate Crawler - Task Scheduler")
         self.setGeometry(100, 100, 1200, 800)
         
+        # Set window icon (if icon file exists)
+        # Check if running as executable (PyInstaller)
+        if getattr(sys, 'frozen', False):
+            # Running as executable - icon is bundled in the same directory as exe
+            icon_path = os.path.join(sys._MEIPASS, 'v3icon.ico')
+        else:
+            # Running as script - icon is in project root
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'v3icon.ico')
+        
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         # Setup styles (dark theme)
         self.setup_dark_theme()
         
@@ -169,11 +181,11 @@ class MainWindow(QMainWindow):
                 padding: 8px;
                 color: #ffffff;
                 font-size: 11px;
-                selection-background-color: #0078d4;
+                selection-background-color: #6EA6BC;
             }
             
             QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus {
-                border-color: #0078d4;
+                border-color: #6EA6BC;
                 background-color: #404040;
             }
             
@@ -183,7 +195,7 @@ class MainWindow(QMainWindow):
             
             /* Buttons */
             QPushButton {
-                background-color: #0078d4;
+                background-color: #6EA6BC;
                 border: none;
                 border-radius: 6px;
                 padding: 10px 16px;
@@ -194,11 +206,11 @@ class MainWindow(QMainWindow):
             }
             
             QPushButton:hover {
-                background-color: #106ebe;
+                background-color: #5A94A8;
             }
             
             QPushButton:pressed {
-                background-color: #005a9e;
+                background-color: #4A7A8A;
             }
             
             QPushButton:disabled {
@@ -222,13 +234,13 @@ class MainWindow(QMainWindow):
             }
             
             QCheckBox::indicator:checked {
-                background-color: #0078d4;
+                background-color: #6EA6BC;
                 border-color: #ffffff;
                 image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDNMNC41IDguNUwyIDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
             }
             
             QCheckBox::indicator:hover {
-                border-color: #0078d4;
+                border-color: #6EA6BC;
             }
             
             /* Group Boxes */
@@ -296,7 +308,7 @@ class MainWindow(QMainWindow):
                 color: #ffffff;
                 font-family: 'Consolas', 'Monaco', monospace;
                 font-size: 10px;
-                selection-background-color: #0078d4;
+                selection-background-color: #6EA6BC;
             }
             
             /* Scrollbars */
@@ -332,7 +344,7 @@ class MainWindow(QMainWindow):
             }
             
             QComboBox:focus {
-                border-color: #0078d4;
+                border-color: #6EA6BC;
             }
             
             QComboBox::drop-down {
@@ -344,23 +356,66 @@ class MainWindow(QMainWindow):
                 image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
             }
             
-            /* SpinBox specific */
-            QSpinBox::up-button, QSpinBox::down-button {
-                width: 16px;
+            /* SpinBox and TimeEdit - hide up/down buttons */
+            QSpinBox::up-button, QSpinBox::down-button, QTimeEdit::up-button, QTimeEdit::down-button {
+                width: 0px;
+                height: 0px;
                 border: none;
-                background-color: #555555;
+                background: transparent;
             }
             
-            QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-                background-color: #666666;
+            QSpinBox::up-arrow, QSpinBox::down-arrow, QTimeEdit::up-arrow, QTimeEdit::down-arrow {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
             }
             
-            QSpinBox::up-arrow {
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIuNSA3LjVMNSA1TDcuNSA3LjUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K);
+            /* Message Boxes and Dialogs */
+            QMessageBox {
+                background-color: #2b2b2b;
+                color: #ffffff;
             }
             
-            QSpinBox::down-arrow {
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTcuNSAyLjVMNSA1TDIuNSAyLjUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K);
+            QMessageBox QLabel {
+                color: #ffffff;
+                background-color: transparent;
+            }
+            
+            QMessageBox QPushButton {
+                background-color: #6EA6BC;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                color: white;
+                font-weight: 500;
+                min-width: 80px;
+            }
+            
+            QMessageBox QPushButton:hover {
+                background-color: #5A94A8;
+            }
+            
+            QMessageBox QPushButton:pressed {
+                background-color: #4A7A8A;
+            }
+            
+            /* File Dialog */
+            QFileDialog {
+                background-color: #2b2b2b;
+                color: #ffffff;
+            }
+            
+            QFileDialog QLabel {
+                color: #ffffff;
+            }
+            
+            QFileDialog QLineEdit {
+                background-color: #3c3c3c;
+                border: 2px solid #555555;
+                border-radius: 6px;
+                padding: 8px;
+                color: #ffffff;
             }
         """)
     
@@ -379,7 +434,10 @@ class MainWindow(QMainWindow):
         self.create_config_tab()
         self.create_status_tab()
         self.create_results_tab()
-        self.create_logs_tab()
+        
+        # Only create logs tab in debug mode
+        if self.debug_mode:
+            self.create_logs_tab()
     
     def create_config_tab(self):
         """Create the configuration tab"""
@@ -393,7 +451,7 @@ class MainWindow(QMainWindow):
         # Run Now button (green) - Auto-installs if needed
         self.run_now_btn = QPushButton("⚡ Run Now")
         self.run_now_btn.setMinimumHeight(50)
-        self.run_now_btn.setStyleSheet("QPushButton { background-color: #3d7d3d; } QPushButton:hover { background-color: #2d5d2d; }")
+        self.run_now_btn.setStyleSheet("QPushButton { background-color: #6EBC9A; } QPushButton:hover { background-color: #5AA885; } QPushButton:pressed { background-color: #4A8A70; }")
         self.run_now_btn.clicked.connect(self.run_now)
         button_layout.addWidget(self.run_now_btn)
         
@@ -493,6 +551,7 @@ class MainWindow(QMainWindow):
         times_header.addWidget(QLabel("Scheduled Times:"))
         self.add_time_btn = QPushButton("Add Time")
         self.add_time_btn.setMaximumWidth(100)
+        self.add_time_btn.setStyleSheet("QPushButton { background-color: #6EBC9A; } QPushButton:hover { background-color: #5AA885; } QPushButton:pressed { background-color: #4A8A70; }")
         self.add_time_btn.clicked.connect(self.add_scheduled_time)
         times_header.addWidget(self.add_time_btn)
         times_header.addStretch()
@@ -532,7 +591,7 @@ class MainWindow(QMainWindow):
         # Help button for app password explanation
         self.help_btn = QPushButton("?")
         self.help_btn.setFixedWidth(32)
-        self.help_btn.setStyleSheet("QPushButton { background-color: #0078d4; border: 1px solid #ffffff; border-radius: 6px; font-weight: bold; font-size: 14px; padding: 6px; }")
+        self.help_btn.setStyleSheet("QPushButton { background-color: #6EA6BC; border: 1px solid #ffffff; border-radius: 6px; font-weight: bold; font-size: 14px; padding: 6px; }")
         self.help_btn.clicked.connect(self.show_app_password_help)
         
         password_layout.addWidget(self.email_password_edit)
@@ -687,7 +746,7 @@ class MainWindow(QMainWindow):
         
         remove_btn = QPushButton("Remove")
         remove_btn.setMaximumWidth(90)
-        remove_btn.setStyleSheet("QPushButton { background-color: #5d2d2d; } QPushButton:hover { background-color: #7d3d3d; }")
+        remove_btn.setStyleSheet("QPushButton { background-color: #BC6E8A; } QPushButton:hover { background-color: #A85A76; } QPushButton:pressed { background-color: #8A4A62; }")
         remove_btn.clicked.connect(lambda: self.remove_scheduled_time(time_widget))
         
         time_layout.addWidget(time_edit)
@@ -805,7 +864,7 @@ class MainWindow(QMainWindow):
             if not self.task_manager.is_task_installed():
                 logger.info("Task not installed for run now, auto-installing...")
                 if not self.task_manager.install_task():
-                    QMessageBox.warning(self, "Error", "Failed to install task. Please try the Install Task button.")
+                    QMessageBox.warning(self, "Error", "Failed to install task. Please try again or contact support.")
                 return
             
             # Run using ScraperManager directly for immediate execution
@@ -898,7 +957,7 @@ class MainWindow(QMainWindow):
                     
                     # Send email if enabled and configured
                     self.send_scraping_email(results, results_data)
-                
+        
                 except Exception as e:
                     logger.error(f"Error during manual scraping: {str(e)}")
                     import traceback
@@ -926,7 +985,7 @@ class MainWindow(QMainWindow):
             if not self.task_manager.is_task_installed():
                 logger.info("Task not installed, auto-installing...")
                 if not self.task_manager.install_task():
-                    QMessageBox.warning(self, "Error", "Failed to install task. Please try the Install Task button.")
+                    QMessageBox.warning(self, "Error", "Failed to install task. Please try again or contact support.")
                     return
             
             # Check if background scheduling is enabled
@@ -944,7 +1003,7 @@ class MainWindow(QMainWindow):
             if self.task_manager.schedule_times(times):
                 QMessageBox.information(self, "Success", f"Task scheduled for times: {', '.join(times)}")
             else:
-                QMessageBox.warning(self, "Error", "Failed to schedule task. Check logs for details.")
+                QMessageBox.warning(self, "Error", "Failed to schedule task. Please try again or contact support.")
         
         except Exception as e:
             logger.error(f"Error saving and scheduling: {str(e)}")
@@ -960,7 +1019,7 @@ class MainWindow(QMainWindow):
                 if self.task_manager.delete_task():
                     QMessageBox.information(self, "Success", "Task removed successfully!")
                 else:
-                    QMessageBox.warning(self, "Error", "Failed to remove task. Check logs for details.")
+                    QMessageBox.warning(self, "Error", "Failed to remove task. Please try again or contact support.")
         
         except Exception as e:
             logger.error(f"Error removing task: {str(e)}")
@@ -1112,8 +1171,8 @@ class MainWindow(QMainWindow):
                     
                 except Exception as e:
                     results_text = f"Error reading latest results: {str(e)}"
-            else:
-                results_text = "No results yet. Run scraping to see results here."
+                else:
+                    results_text = "No results yet. Run scraping to see results here."
             
             self.results_text.setPlainText(results_text)
         
@@ -1364,6 +1423,18 @@ def main():
     app.setApplicationName("Commercial Real Estate Crawler")
     app.setApplicationVersion("3.0")
     app.setOrganizationName("Commercial Real Estate Tools")
+    
+    # Set application icon (for taskbar and window)
+    # Check if running as executable (PyInstaller)
+    if getattr(sys, 'frozen', False):
+        # Running as executable - icon is bundled in the same directory as exe
+        icon_path = os.path.join(sys._MEIPASS, 'v3icon.ico')
+    else:
+        # Running as script - icon is in project root
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'v3icon.ico')
+    
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     
     window = MainWindow()
     window.show()

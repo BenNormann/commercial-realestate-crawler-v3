@@ -1,164 +1,213 @@
-# Commercial Real Estate Crawler
+# Commercial Real Estate Crawler v3
 
-A web crawler for commercial real estate websites with a Windows service for scheduled execution.
+A modern desktop application for automatically scraping commercial real estate listings from multiple websites with intelligent scheduling and email notifications.
 
-## Overview
+## 🏢 Overview
 
-This application allows you to:
-- Scrape commercial real estate listings from various websites
-- Run the crawler on a schedule via a Windows service
-- View and filter results in a user-friendly GUI
-- Receive email notifications with new listings
+This application provides a comprehensive solution for monitoring commercial real estate markets:
 
-## Installation
+- **🕷️ Multi-Website Scraping**: Automatically scrapes listings from LoopNet.com and CommercialMLS.com
+- **⏰ Smart Scheduling**: Uses Windows Task Scheduler for reliable background execution
+- **📧 Email Notifications**: Sends detailed email reports with new listings
+- **🎨 Modern GUI**: Clean, dark-themed desktop interface built with PyQt5
+- **📊 Detailed Results**: View property details including price, type, size, location, and descriptions
+- **🔧 Easy Configuration**: Set search criteria, schedule times, and email preferences through the GUI
+- **📦 Standalone Executable**: Can be compiled into a portable .exe file
 
-1. Make sure you have Python 3.8 or higher installed
-2. Clone or download this repository
-3. Install required packages:
-   ```
+## 🛠️ Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- Windows 10/11 (for Task Scheduler integration)
+
+### Setup
+1. Clone or download this repository
+2. Install required packages:
+   ```bash
    pip install -r requirements.txt
    ```
 
-## Usage
+## 🚀 Usage
 
-### Starting the GUI
+### Starting the Application
 
-To start the application, run:
-
-```
+**For Development/Testing:**
+```bash
 python launch_gui.py
 ```
 
-### Windows Service
-
-The application can run as a Windows service to perform scheduled crawling in the background, even when no user is logged in.
-
-#### Service Setup
-
-1. **Install the Service**:
-   Click the "Install Service" button in the GUI.
-   - This will request administrator privileges via a UAC prompt.
-   - The service will be installed on your system.
-
-2. **Start the Service**:
-   Click the "Start Service" button in the GUI.
-   - This will request administrator privileges via a UAC prompt.
-   - The service will start and run in the background.
-
-3. **Stop the Service**:
-   Click the "Stop Service" button in the GUI.
-   - This will request administrator privileges via a UAC prompt.
-   - The service will stop.
-
-4. **Remove the Service**:
-   Click the "Remove Service" button in the GUI.
-   - This will request administrator privileges via a UAC prompt.
-   - The service will be uninstalled from your system.
-
-### Manual Service Control
-
-You can control the service directly from the command line using either Python commands or the included batch file:
-
-#### Using Python:
-
-```
-# Install the service
-python -m service.service_controller install
-
-# Start the service
-python -m service.service_controller start
-
-# Stop the service
-python -m service.service_controller stop
-
-# Check service status
-python -m service.service_controller status
-
-# Remove the service
-python -m service.service_controller remove
+**For Production/Clean Launch (No Console Window):**
+```bash
+pythonw launch_gui.py
 ```
 
-#### Using the Batch File (Windows only):
+> **💡 Pro Tip**: Use `pythonw` instead of `python` to launch the GUI without showing a console window. This provides a cleaner user experience.
 
-```
-# Install the service
-manage_service.bat install
+### Configuration
 
-# Start the service
-manage_service.bat start
-
-# Stop the service
-manage_service.bat stop
-
-# Check service status
-manage_service.bat status
-
-# Remove the service
-manage_service.bat remove
-```
-
-## Configuration
-
-You can configure the crawler through the GUI:
-
-1. **Crawler Settings**:
-   - Websites to crawl
-   - Search criteria
-   - Frequency of crawling
+1. **Search Parameters**:
+   - Select property types (Office, Retail, Industrial, Multifamily)
+   - Set location (e.g., "Seattle, WA")
+   - Define price range (optional)
+   - Choose websites to search
+   - Set how many days back to search
 
 2. **Email Notifications**:
-   - Enable/disable email notifications
-   - Set up email credentials
-   - Configure recipients
+   - Enter your Gmail address
+   - Generate and enter a Gmail App Password (not your regular password)
+   - Enable email notifications
+   - Save credentials for scheduled runs
 
-The configuration is saved in the `config/config.json` file.
+3. **Scheduling**:
+   - Enable background scheduling
+   - Add one or more daily run times
+   - Save configuration to install/update the scheduled task
 
-## Troubleshooting
+### Main Features
 
-### Administrator Privileges
+#### ⚡ Run Now
+- Immediately executes a search with current parameters
+- Shows progress in the Results tab
+- Sends email notification if configured
 
-All service operations (install, start, stop, remove) require administrator privileges. If you encounter permission errors:
+#### 💾 Save Search Parameters
+- Saves current configuration
+- Installs/updates Windows scheduled task
+- Enables automatic daily runs at specified times
 
-1. Make sure you're allowing the UAC prompts when requested
-2. Try running the application as administrator
-3. Check Windows Event Viewer for any service-related errors
+#### 📋 Results Tab
+- View detailed listings from recent searches
+- See property details: price, type, size, location, description, URL
+- Refresh to load latest results
 
-### Service Not Starting
+#### 📊 Status Tab
+- Monitor scheduled task status
+- View last run time and next scheduled run
+- Check total results from last search
 
-If the service fails to start:
+#### 📝 Logs Tab
+- View application logs for troubleshooting
+- Monitor scraping activity and errors
 
-1. Check the service log in `debug/service.log`
-2. Verify that your Python environment has all required dependencies
-3. Make sure the service isn't already installed or running
+## 🗓️ Scheduling System
 
-### Windows 10 Compatibility
+The application uses **Windows Task Scheduler** for reliable background execution:
 
-This application is designed to work with all modern versions of Windows including Windows 10 and Windows 11. The service management utility (`service_controller.py`) uses PowerShell commands to elevate privileges instead of relying on win32api/win32con.
+- **Automatic Installation**: Tasks are created automatically when you save configuration
+- **Multiple Times**: Schedule multiple daily run times
+- **Background Operation**: Runs even when GUI is closed or user is logged out
+- **Email Integration**: Scheduled runs automatically send email notifications
+- **Robust Execution**: Built-in error handling and logging
 
-## Advanced Usage
+### Task Management
+- Tasks are automatically installed/updated when you save configuration
+- Task name: "CommercialRealEstateScraper"
+- Uses `pythonw.exe` for silent execution
+- Runs with user privileges (no admin required)
 
-### Command Line Interface
+## 📧 Email Setup
 
-For advanced users, the crawler can be controlled via command line:
+### Gmail App Password Setup
+1. Go to your [Google Account](https://myaccount.google.com/)
+2. Click **Security** in the left menu
+3. Under "Signing in to Google", click **2-Step Verification**
+4. Enable 2-Step Verification if not already enabled
+5. Go back to Security, scroll down to **App passwords**
+6. Click **App passwords**
+7. Select **Mail** and **Windows Computer**
+8. Click **Generate**
+9. Copy the 16-character password (example: "abcd efgh ijkl mnop")
+10. Paste it in the App Password field in the application
 
+> **⚠️ Important**: Use your App Password, NOT your regular Gmail password!
+
+## 📦 Building Executable
+
+Create a standalone .exe file that can run on any Windows machine:
+
+```bash
+# Install PyInstaller (if not already installed)
+pip install pyinstaller
+
+# Build the executable
+pyinstaller build_exe.spec
 ```
-# Run the crawler directly (without service)
-python -m scraper.scraper_manager
+
+The executable will be created in `dist/CommercialRealEstateCrawler.exe`
+
+### Executable Features
+- **Self-contained**: Includes all dependencies
+- **No Python required**: Runs on machines without Python installed
+- **Secure**: Excludes debug files and credentials from the build
+- **Portable**: Single file that can be distributed easily
+
+## 🔧 Configuration Files
+
+- `config/config.json`: Main application settings (auto-saved)
+- `userinfo.py`: Email credentials (excluded from executable builds)
+- `config/latest_results.json`: Most recent search results
+- `debug/*.log`: Application logs
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Console Window Keeps Appearing**:
+- Use `pythonw launch_gui.py` instead of `python launch_gui.py`
+
+**Scheduled Task Not Running**:
+- Check Status tab for task status
+- Ensure "Enable Background Scheduling" is checked
+- Verify at least one scheduled time is set
+
+**Email Notifications Not Working**:
+- Verify Gmail App Password (not regular password)
+- Check that "Send email notifications" is enabled
+- Ensure credentials are saved
+- Check logs for SMTP errors
+
+**Scraping Not Finding Results**:
+- Verify search parameters (location, property types)
+- Check if websites are accessible
+- Review logs for scraping errors
+- Try reducing the search scope
+
+### Log Files
+Check `debug/` folder for detailed logs:
+- `gui.log`: GUI application logs
+- `task_runner.log`: Scheduled task execution logs
+- `scraper_manager.log`: Web scraping logs
+
+## 🏗️ Development
+
+### Project Structure
+```
+commercial-realestate-crawler-v3/
+├── gui/                    # PyQt5 GUI application
+├── scraper/               # Web scraping modules
+├── task_scheduler/        # Windows Task Scheduler integration
+├── utils/                 # Email and utility functions
+├── debug/                 # Log files
+├── config/                # Configuration and results
+├── launch_gui.py          # Main entry point
+├── build_exe.spec         # PyInstaller configuration
+└── requirements.txt       # Python dependencies
 ```
 
-## Development
+### Key Components
+- **GUI**: Modern PyQt5 interface with dark theme
+- **Scraper Manager**: Coordinates multiple website scrapers
+- **Task Scheduler**: Windows integration for background execution
+- **Email System**: SMTP-based notifications with detailed formatting
 
-### Service Management
+## 📝 License
 
-The service management functionality has been simplified and consolidated:
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- All service management functions (install, remove, start, stop, status) are now in `service/service_controller.py`
-- Eliminated redundant files (`install_service.py` and `service_control.py`)
-- Added convenience batch file (`manage_service.bat`) for Windows users
-- Service functions are now exposed at the package level through `service/__init__.py`
+## 🤝 Contributing
 
-If you're upgrading from a previous version, you can run `cleanup.bat` to remove the obsolete files.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+---
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+**⭐ Star this repository if you find it useful!** 
