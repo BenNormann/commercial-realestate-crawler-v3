@@ -113,6 +113,9 @@ class MainWindow(QMainWindow):
         # Initialize task manager
         self.task_manager = TaskSchedulerManager()
         
+        # Load configuration first
+        self.load_config()
+        
         # Setup window
         self.setWindowTitle("Commercial Real Estate Crawler - Task Scheduler")
         self.setGeometry(100, 100, 1200, 800)
@@ -129,11 +132,9 @@ class MainWindow(QMainWindow):
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
-        # Setup styles (dark theme)
-        self.setup_dark_theme()
-        
-        # Load configuration
-        self.load_config()
+        # Setup styles (start with user's preferred theme)
+        self.is_dark_mode = self.user_config.get('dark_mode', True)
+        self.apply_theme()
         
         # Create and set up the UI
         self.setup_ui()
@@ -162,6 +163,27 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Error loading config: {str(e)}")
             self.user_config = DEFAULT_CONFIG.copy()
+    
+    def setup_tab_bar_toggle(self):
+        """Setup dark mode toggle aligned with tab bar"""
+        # Dark mode toggle
+        self.dark_mode_toggle = QCheckBox("🌙 Dark Mode")
+        self.dark_mode_toggle.setChecked(self.user_config.get('dark_mode', True))
+        self.dark_mode_toggle.toggled.connect(self.toggle_theme)
+        self.dark_mode_toggle.setStyleSheet("""
+            QCheckBox {
+                font-size: 12px;
+                font-weight: 500;
+                margin: 8px 5px;
+                min-height: 20px;
+            }
+        """)
+        
+        # Update text based on current mode
+        if self.is_dark_mode:
+            self.dark_mode_toggle.setText("🌙 Dark Mode")
+        else:
+            self.dark_mode_toggle.setText("☀️ Light Mode")
     
     def setup_dark_theme(self):
         """Set up modern dark theme for the application"""
@@ -419,6 +441,286 @@ class MainWindow(QMainWindow):
             }
         """)
     
+    def setup_light_theme(self):
+        """Set up modern light theme for the application"""
+        # Apply a modern light stylesheet
+        self.setStyleSheet("""
+            /* Main Window */
+            QMainWindow {
+                background-color: #f5f5f5;
+                color: #333333;
+            }
+            
+            /* Input Fields */
+            QLineEdit, QSpinBox, QTimeEdit {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                padding: 8px;
+                color: #333333;
+                font-size: 11px;
+                selection-background-color: #6EA6BC;
+            }
+            
+            QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus {
+                border-color: #6EA6BC;
+                background-color: #ffffff;
+            }
+            
+            QLineEdit::placeholder {
+                color: #888888;
+            }
+            
+            /* Buttons */
+            QPushButton {
+                background-color: #6EA6BC;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 16px;
+                color: white;
+                font-weight: 500;
+                font-size: 11px;
+                min-height: 20px;
+            }
+            
+            QPushButton:hover {
+                background-color: #5A94A8;
+            }
+            
+            QPushButton:pressed {
+                background-color: #4A7A8A;
+            }
+            
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #888888;
+            }
+            
+            /* Checkboxes */
+            QCheckBox {
+                color: #333333;
+                font-size: 11px;
+                spacing: 8px;
+            }
+            
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border-radius: 3px;
+                border: 2px solid #cccccc;
+                background-color: #ffffff;
+            }
+            
+            QCheckBox::indicator:checked {
+                background-color: #6EA6BC;
+                border-color: #333333;
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDNMNC41IDguNUwyIDYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+            }
+            
+            QCheckBox::indicator:hover {
+                border-color: #6EA6BC;
+            }
+            
+            /* Group Boxes */
+            QGroupBox {
+                font-weight: 600;
+                font-size: 12px;
+                color: #333333;
+                border: 2px solid #cccccc;
+                border-radius: 8px;
+                margin-top: 12px;
+                padding-top: 12px;
+                background-color: #ffffff;
+            }
+            
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 12px;
+                padding: 0 8px 0 8px;
+                color: #333333;
+                background-color: #ffffff;
+            }
+            
+            /* Tabs */
+            QTabWidget::pane {
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                background-color: #f5f5f5;
+                margin-top: -1px;
+            }
+            
+            QTabBar::tab {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 10px 16px;
+                margin-right: 2px;
+                color: #333333;
+                font-weight: 500;
+                min-width: 80px;
+            }
+            
+            QTabBar::tab:selected {
+                background-color: #f5f5f5;
+                border-color: #cccccc;
+                border-bottom: 2px solid #f5f5f5;
+            }
+            
+            QTabBar::tab:hover:!selected {
+                background-color: #e8e8e8;
+            }
+            
+            /* Labels */
+            QLabel {
+                color: #333333;
+                font-size: 11px;
+            }
+            
+            /* Text Areas */
+            QTextEdit {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                color: #333333;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 10px;
+                selection-background-color: #6EA6BC;
+            }
+            
+            /* Scrollbars */
+            QScrollBar:vertical {
+                background-color: #ffffff;
+                width: 12px;
+                border-radius: 6px;
+            }
+            
+            QScrollBar::handle:vertical {
+                background-color: #cccccc;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            
+            QScrollBar::handle:vertical:hover {
+                background-color: #999999;
+            }
+            
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+            }
+            
+            /* ComboBox */
+            QComboBox {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                padding: 8px;
+                color: #333333;
+                font-size: 11px;
+            }
+            
+            QComboBox:focus {
+                border-color: #6EA6BC;
+            }
+            
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            
+            QComboBox::down-arrow {
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+            }
+            
+            /* SpinBox and TimeEdit - hide up/down buttons */
+            QSpinBox::up-button, QSpinBox::down-button, QTimeEdit::up-button, QTimeEdit::down-button {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            
+            QSpinBox::up-arrow, QSpinBox::down-arrow, QTimeEdit::up-arrow, QTimeEdit::down-arrow {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            
+            /* Message Boxes and Dialogs */
+            QMessageBox {
+                background-color: #f5f5f5;
+                color: #333333;
+            }
+            
+            QMessageBox QLabel {
+                color: #333333;
+                background-color: transparent;
+            }
+            
+            QMessageBox QPushButton {
+                background-color: #6EA6BC;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                color: white;
+                font-weight: 500;
+                min-width: 80px;
+            }
+            
+            QMessageBox QPushButton:hover {
+                background-color: #5A94A8;
+            }
+            
+            QMessageBox QPushButton:pressed {
+                background-color: #4A7A8A;
+            }
+            
+            /* File Dialog */
+            QFileDialog {
+                background-color: #f5f5f5;
+                color: #333333;
+            }
+            
+            QFileDialog QLabel {
+                color: #333333;
+            }
+            
+            QFileDialog QLineEdit {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                padding: 8px;
+                color: #333333;
+            }
+        """)
+    
+    def apply_theme(self):
+        """Apply the current theme (dark or light)"""
+        if self.is_dark_mode:
+            self.setup_dark_theme()
+        else:
+            self.setup_light_theme()
+    
+    def toggle_theme(self):
+        """Toggle between dark and light themes"""
+        self.is_dark_mode = not self.is_dark_mode
+        self.user_config['dark_mode'] = self.is_dark_mode
+        
+        # Update the toggle text
+        if self.is_dark_mode:
+            self.dark_mode_toggle.setText("🌙 Dark Mode")
+        else:
+            self.dark_mode_toggle.setText("☀️ Light Mode")
+        
+        # Apply new theme
+        self.apply_theme()
+        
+        # Auto-save configuration
+        self.auto_save_config()
+    
     def setup_ui(self):
         """Set up the user interface"""
         # Create central widget and main layout
@@ -428,6 +730,11 @@ class MainWindow(QMainWindow):
         
         # Create tab widget
         self.tab_widget = QTabWidget()
+        
+        # Add dark mode toggle to tab bar corner
+        self.setup_tab_bar_toggle()
+        self.tab_widget.setCornerWidget(self.dark_mode_toggle, Qt.TopRightCorner)
+        
         main_layout.addWidget(self.tab_widget)
         
         # Create tabs
