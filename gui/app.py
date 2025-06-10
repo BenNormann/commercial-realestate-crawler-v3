@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import subprocess
 import threading
+import ctypes
 
 # Add parent directory to path for imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -102,12 +103,13 @@ class WorkerThread(QThread):
 class MainWindow(QMainWindow):
     """Main window for the application"""
     
-    def __init__(self, debug_mode=False):
+    def __init__(self, debug_mode=False, auto_save=False):
         """Initialize the main window"""
         super().__init__()
         
-        # Store debug mode
+        # Store debug mode and auto_save flag
         self.debug_mode = debug_mode
+        self.auto_save = auto_save
         self.scraping_running = False  # Track if scraping is currently running
         
         # Initialize task manager
@@ -147,6 +149,12 @@ class MainWindow(QMainWindow):
         
         # Setup background status checker
         self.setup_status_checker()
+        
+        # Auto-save and schedule if requested (after restart with admin)
+        if self.auto_save and self.is_admin():
+            logger.info("Auto-save requested and running with admin privileges - scheduling save operation")
+            # Use QTimer to ensure UI is fully loaded before auto-saving
+            QTimer.singleShot(1000, self.auto_save_and_schedule)
     
     def load_config(self):
         """Load configuration from file"""
@@ -982,6 +990,57 @@ class MainWindow(QMainWindow):
         
         self.tab_widget.addTab(logs_widget, "Logs")
 
+    def is_admin(self):
+        """Check if the application is running with administrator privileges"""
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+
+    def request_admin_privileges(self):
+        """Request administrator privileges using UAC prompt"""
+        try:
+            if getattr(sys, 'frozen', False):
+                # Running as compiled executable
+                exe_path = sys.executable
+                parameters = "--auto-save"
+            else:
+                # Running as script - always use the launcher
+                launcher_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'launch_gui.py')
+                exe_path = sys.executable
+                if os.path.exists(launcher_path):
+                    parameters = f'"{launcher_path}" --auto-save'
+                else:
+                    # If launcher doesn't exist, use current script directly
+                    parameters = f'"{os.path.abspath(__file__)}" --auto-save'
+            
+            logger.info(f"Attempting to restart with admin: {exe_path} {parameters}")
+            
+            # Show UAC prompt and restart with admin privileges
+            result = ctypes.windll.shell32.ShellExecuteW(
+                None, 
+                "runas", 
+                exe_path, 
+                parameters, 
+                None, 
+                1  # SW_SHOWNORMAL
+            )
+            
+            # If successful, exit current instance
+            if result > 32:  # Success
+                logger.info("Restarting with administrator privileges...")
+                # Give a small delay before closing to ensure the new process starts
+                QTimer.singleShot(500, self.close)
+                return True
+            else:
+                # UAC was cancelled or failed - continue running without admin
+                logger.info(f"UAC prompt cancelled or failed (code: {result}). Continuing without admin privileges.")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error requesting admin privileges: {str(e)}")
+            return False
+
     def load_values(self):
         """Load configuration values into UI elements"""
         try:
@@ -1285,6 +1344,38 @@ class MainWindow(QMainWindow):
     def save_and_schedule(self):
         """Save configuration and schedule the task"""
         try:
+            # Check if we have admin privileges for task scheduling
+            if not self.is_admin():
+                reply = QMessageBox.question(
+                    self, 
+                    "Administrator Privileges Required", 
+                    "Administrator privileges are required to schedule tasks.\n\n"
+                    "Would you like to restart the application with administrator privileges?",
+                    QMessageBox.Yes | QMessageBox.No, 
+                    QMessageBox.Yes
+                )
+                
+                if reply == QMessageBox.Yes:
+                    try:
+                        # Save configuration before restarting
+                        self.save_configuration()
+                        # Request admin privileges (will restart the app)
+                        if self.request_admin_privileges():
+                            return  # App will restart with admin privileges
+                        else:
+                            # UAC was cancelled - continue with current session
+                            QMessageBox.information(self, "Info", "Administrator access was not granted. Configuration saved, but task scheduling is disabled.")
+                            return
+                    except Exception as e:
+                        logger.error(f"Error during admin restart process: {str(e)}")
+                        QMessageBox.warning(self, "Error", f"Error restarting with admin privileges: {str(e)}")
+                        return
+                else:
+                    # User declined admin privileges, just save config
+                    self.save_configuration()
+                    QMessageBox.information(self, "Info", "Configuration saved. Task scheduling requires administrator privileges.")
+                    return
+            
             # Save configuration first (auto-save already handled this, but ensure it's saved)
             self.save_configuration()
             
@@ -1315,6 +1406,42 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Error saving and scheduling: {str(e)}")
             QMessageBox.critical(self, "Error", f"Error saving and scheduling: {str(e)}")
+
+    def auto_save_and_schedule(self):
+        """Auto-save and schedule after restarting with admin privileges"""
+        try:
+            logger.info("Performing auto-save and schedule operation")
+            
+            # Save configuration first
+            self.save_configuration()
+            
+            # Auto-install task if not installed
+            if not self.task_manager.is_task_installed():
+                logger.info("Task not installed, auto-installing...")
+                if not self.task_manager.install_task():
+                    QMessageBox.warning(self, "Auto-Save Error", "Failed to install task automatically.")
+                    return
+            
+            # Check if background scheduling is enabled
+            if not self.background_enabled_cb.isChecked():
+                QMessageBox.information(self, "Auto-Save Complete", "Configuration saved successfully. Background scheduling is disabled.")
+                return
+            
+            # Get scheduled times
+            times = self.get_scheduled_times()
+            if not times:
+                QMessageBox.warning(self, "Auto-Save Error", "No scheduled times found. Please add at least one scheduled time.")
+                return
+            
+            # Schedule the task
+            if self.task_manager.schedule_times(times):
+                QMessageBox.information(self, "Auto-Save Complete", f"Configuration saved and task scheduled successfully for times: {', '.join(times)}")
+            else:
+                QMessageBox.warning(self, "Auto-Save Error", "Configuration saved but failed to schedule task.")
+        
+        except Exception as e:
+            logger.error(f"Error during auto-save and schedule: {str(e)}")
+            QMessageBox.critical(self, "Auto-Save Error", f"Error during auto-save: {str(e)}")
 
     def kill_task(self):
         """Remove the scheduled task completely"""
@@ -1478,8 +1605,8 @@ class MainWindow(QMainWindow):
                     
                 except Exception as e:
                     results_text = f"Error reading latest results: {str(e)}"
-                else:
-                    results_text = "No results yet. Run scraping to see results here."
+            else:
+                results_text = "No results yet. Run scraping to see results here."
             
             self.results_text.setPlainText(results_text)
         
@@ -1717,6 +1844,12 @@ def main():
     """Main function to run the application"""
     import os
     import sys
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Commercial Real Estate Crawler GUI")
+    parser.add_argument('--auto-save', action='store_true', help='Automatically save and schedule after startup (used after admin restart)')
+    args = parser.parse_args()
     
     # More aggressive Qt MIME database fix - set before any Qt operations
     os.environ['QT_LOGGING_RULES'] = 'qt.qpa.mime=false'
@@ -1743,7 +1876,7 @@ def main():
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     
-    window = MainWindow()
+    window = MainWindow(auto_save=args.auto_save)
     window.show()
     
     sys.exit(app.exec_()) 

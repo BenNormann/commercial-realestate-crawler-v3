@@ -238,6 +238,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Commercial Real Estate Crawler GUI Launcher")
     parser.add_argument('--debug', action='store_true', help='Run in debug mode (shows console and browser)')
+    parser.add_argument('--auto-save', action='store_true', help='Automatically save and schedule after startup (used after admin restart)')
     args = parser.parse_args()
     
     # Hide console window unless in debug mode
@@ -248,38 +249,15 @@ def main():
             ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 = SW_HIDE
     
     try:
-        # Check if we have admin privileges, and if not, restart with elevation
-        if not is_admin():
-            logger.info("Not running as admin, requesting elevation...")
-            if args.debug:
-                print("Requesting administrator privileges...")
-            
-            # Get the current script path and arguments
-            script_path = os.path.abspath(__file__)
-            cmd_args = ' '.join(sys.argv[1:])  # Get any command line args (including --debug)
-            
-            # Use ShellExecuteW to restart with admin privileges
-            try:
-                ctypes.windll.shell32.ShellExecuteW(
-                    None, 
-                    "runas", 
-                    sys.executable, 
-                    f'"{script_path}" {cmd_args}', 
-                    None, 
-                    1  # SW_SHOWNORMAL
-                )
-                # Exit this non-admin instance
-                sys.exit(0)
-            except Exception as e:
-                logger.error(f"Failed to restart with admin privileges: {e}")
-                if args.debug:
-                    print(f"Failed to request admin privileges: {e}")
-                    print("The application may not work properly without administrator rights.")
-                    input("Press Enter to continue anyway...")
-        else:
+        # Log admin status but don't force elevation
+        if is_admin():
             logger.info("Running with administrator privileges")
             if args.debug:
                 print("Running with administrator privileges")
+        else:
+            logger.info("Running without administrator privileges (will prompt when needed)")
+            if args.debug:
+                print("Running without administrator privileges (will prompt when needed)")
         
         # Suppress Qt warnings and MIME database errors unless in debug mode
         if not args.debug:
@@ -295,8 +273,8 @@ def main():
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-            
-        window = MainWindow(debug_mode=args.debug)
+        
+        window = MainWindow(debug_mode=args.debug, auto_save=args.auto_save)
         window.show()
         
         # Run the application

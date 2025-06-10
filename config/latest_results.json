@@ -2,196 +2,27 @@
   "results": {
     "loopnet": [
       {
-        "address": "505 E Denny Way, Seattle, WA",
-        "price": "$725,000",
+        "address": "Capitol Hill Redevelopment Site \u2013 Retail for Sale, Seattle, WA",
+        "price": "$3,950,000",
+        "property_type": "Type not available",
+        "url": "https://www.loopnet.com/Listing/Capitol-Hill-Redevelopment-Site/31752406/"
+      },
+      {
+        "address": "2410 W Manor Pl, Seattle, WA",
+        "price": "$7,750,000",
         "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/505-E-Denny-Way-Seattle-WA/36054400/"
+        "url": "https://www.loopnet.com/Listing/2410-W-Manor-Pl-Seattle-WA/36128731/"
+      },
+      {
+        "address": "8500 16th Ave NW, Seattle, WA",
+        "price": "$5,000,000",
+        "property_type": "Multifamily",
+        "url": "https://www.loopnet.com/Listing/8500-16th-Ave-NW-Seattle-WA/36128612/"
       }
     ],
-    "commercialmls": [
-      {
-        "property_type": "Retail",
-        "address": "2624 N Monroe",
-        "price": "$750,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1123900"
-      },
-      {
-        "property_type": "Office",
-        "address": "1323 14th Avenue",
-        "price": "$749,900",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/684338ce63e46366b522ebfc"
-      },
-      {
-        "property_type": "Office",
-        "address": "Medical Arts Building",
-        "price": "$990,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1110434"
-      },
-      {
-        "property_type": "Industrial",
-        "address": "30 South Commercial Street",
-        "price": "$799,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/68406f92abe158173ec780ec"
-      },
-      {
-        "property_type": "Industrial",
-        "address": "1390 Commercial Way",
-        "price": "$595,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/683f6c47087a18034060f79a"
-      },
-      {
-        "property_type": "Office",
-        "address": "910 S Anacortes Street",
-        "price": "$675,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/68377c63a1de5f7b9f697fd9"
-      },
-      {
-        "property_type": "Multi-Family",
-        "address": "1101 West Maxwell Avenue",
-        "price": "$595,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1120137"
-      },
-      {
-        "property_type": "Retail",
-        "address": "7344 35th Ave SW",
-        "price": "$678,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1048418"
-      },
-      {
-        "property_type": "Multi-Family",
-        "address": "6476 Kootenai Street",
-        "price": "$600,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/628feb244d00a90007884cc7"
-      },
-      {
-        "property_type": "Office",
-        "address": "8402 57th Avenue E",
-        "price": "$925,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/670d959734b1da32d74cff9c"
-      },
-      {
-        "property_type": "Retail",
-        "address": "Ambassadors Condominium",
-        "price": "$725,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1023840"
-      },
-      {
-        "property_type": "Industrial",
-        "address": "404 Hazel Street",
-        "price": "$575,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/683a045bd0175a6cae194216"
-      },
-      {
-        "property_type": "Multi-Family",
-        "address": "GIS Plaza",
-        "price": "$625,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1028693"
-      },
-      {
-        "property_type": "Office",
-        "address": "Creekside Office Park - 1550 Building",
-        "price": "$599,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1023853"
-      },
-      {
-        "property_type": "Office",
-        "address": "168 Pine",
-        "price": "$925,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1070009"
-      },
-      {
-        "property_type": "Office",
-        "address": "116 Williams Avenue S",
-        "price": "$599,950",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/682b8ef56391e30cff790ee7"
-      },
-      {
-        "property_type": "Retail",
-        "address": "101 S Granite Avenue",
-        "price": "$949,950",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1073329"
-      },
-      {
-        "property_type": "Retail",
-        "address": "708 Metcalf Street",
-        "price": "$595,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/6526f14bbd09a82fbebbc415"
-      },
-      {
-        "property_type": "Retail",
-        "address": "13601 Pacific Avenue",
-        "price": "$875,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1088371"
-      },
-      {
-        "property_type": "Office",
-        "address": "7523 220th Street SW",
-        "price": "$799,950",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/6841352908c3c91e0f8638d1"
-      },
-      {
-        "property_type": "Retail",
-        "address": "City View Condominiums",
-        "price": "$700,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1037620"
-      },
-      {
-        "property_type": "Retail",
-        "address": "Mt Baker - Light Rail Adjacent",
-        "price": "$800,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1046991"
-      },
-      {
-        "property_type": "Office",
-        "address": "445 Barnard Blvd",
-        "price": "$825,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/68363de926415140d2c068ed"
-      },
-      {
-        "property_type": "Retail",
-        "address": "385 Railroad Avenue",
-        "price": "$1,000,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/68228d233ae613226c307fe0"
-      },
-      {
-        "property_type": "Retail",
-        "address": "6515 E Sprague Avenue",
-        "price": "$850,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1047799"
-      },
-      {
-        "property_type": "Office",
-        "address": "207 Broadway",
-        "price": "$990,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1079302"
-      },
-      {
-        "property_type": "Industrial",
-        "address": "3003 E Courtland Avenue",
-        "price": "$880,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1075040"
-      },
-      {
-        "property_type": "Office",
-        "address": "15422 Canyon Rd E",
-        "price": "$750,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1076844"
-      },
-      {
-        "property_type": "Office",
-        "address": "1715 W Kennewick Ave Ste",
-        "price": "$700,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1077793"
-      },
-      {
-        "property_type": "Industrial",
-        "address": "232 Railex Rd",
-        "price": "$700,000",
-        "url": "https://www.commercialmls.com/search/usersearch#/property/1062210"
-      }
-    ]
+    "commercialmls": []
   },
-  "total_results": 31,
-  "datetime": "2025-06-09T20:27:45.156161",
-  "trigger": "scheduled"
+  "total_results": 3,
+  "datetime": "2025-06-10T10:28:41.670420",
+  "trigger": "manual_run"
 }
