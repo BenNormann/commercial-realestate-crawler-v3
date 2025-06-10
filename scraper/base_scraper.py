@@ -41,7 +41,17 @@ class BaseScraper(ABC):
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--start-maximized')
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--enable-unsafe-swiftshader')        # Add a flag to disable WebGL completeSwitches', ['enable-logging', 'enable-automation'])
+        options.add_argument('--enable-unsafe-swiftshader')
+        
+        # Suppress voice transcription and accessibility logs
+        options.add_argument('--disable-features=VizDisplayCompositor')
+        options.add_argument('--disable-features=TranslateUI')
+        options.add_argument('--disable-features=VoiceTranscription')
+        options.add_argument('--disable-accessibility-logging')
+        options.add_argument('--disable-speech-api')
+        options.add_argument('--suppress-message-center-popups')
+        
+        options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
         options.add_experimental_option('useAutomationExtension', False)
         
         # Create service with suppressed output
