@@ -29,7 +29,7 @@ from PyQt5.QtWidgets import (
     QLabel, QLineEdit, QCheckBox, QComboBox, QPushButton, QTabWidget,
     QListWidget, QListWidgetItem, QProgressBar, QSpinBox, QTimeEdit,
     QGroupBox, QFormLayout, QFileDialog, QMessageBox, QTextEdit,
-    QScrollArea, QSplitter, QFrame
+    QScrollArea, QSplitter, QFrame, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal, QThread
 from PyQt5.QtGui import QColor, QIcon, QFont, QPalette
@@ -216,23 +216,73 @@ class MainWindow(QMainWindow):
             }
             
             /* Input Fields - Dark background with white text */
-            QLineEdit, QSpinBox, QTimeEdit {
+            QLineEdit, QSpinBox, QTimeEdit, QComboBox {
                 background-color: #3c3c3c;
                 border: 2px solid #555555;
                 border-radius: 6px;
-                padding: 4px 8px;
+                padding: 8px;
                 color: #ffffff;
-                font-size: 11px;
+                font-size: 13px;
+                font-weight: normal;
                 selection-background-color: #6EA6BC;
+                min-height: 20px;
+                max-height: 36px;
             }
             
-            QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus {
+            QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus, QComboBox:focus {
                 border-color: #6EA6BC;
                 background-color: #404040;
+                outline: none;
+            }
+            
+            QLineEdit:hover, QSpinBox:hover, QTimeEdit:hover, QComboBox:hover {
+                border-color: #6EA6BC;
             }
             
             QLineEdit::placeholder {
                 color: #888888;
+                font-style: italic;
+            }
+            
+            /* Completely hide SpinBox and TimeEdit buttons */
+            QSpinBox::up-button, QSpinBox::down-button, 
+            QTimeEdit::up-button, QTimeEdit::down-button {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+                subcontrol-origin: border;
+                subcontrol-position: right;
+            }
+            
+            QSpinBox::up-arrow, QSpinBox::down-arrow, 
+            QTimeEdit::up-arrow, QTimeEdit::down-arrow {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            
+            /* ComboBox dropdown styling */
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background: transparent;
+            }
+            
+            QComboBox::down-arrow {
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+                width: 12px;
+                height: 12px;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: #3c3c3c;
+                border: 2px solid #555555;
+                border-radius: 6px;
+                color: #ffffff;
+                selection-background-color: #6EA6BC;
+                outline: none;
             }
             
             /* Buttons */
@@ -293,7 +343,7 @@ class MainWindow(QMainWindow):
                 border: 2px solid #555555;
                 border-radius: 8px;
                 margin-top: 12px;
-                padding-top: 12px;
+                padding: 16px;  /* Increased padding */
                 background-color: #323232;
             }
             
@@ -319,11 +369,11 @@ class MainWindow(QMainWindow):
                 border-bottom: none;
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
-                padding: 10px 16px;
+                padding: 10px 32px;  /* Reverted padding */
                 margin-right: 2px;
                 color: #ffffff;
                 font-weight: 500;
-                min-width: 80px;
+                min-width: 120px;  /* Increased min-width to prevent text cutoff */
             }
             
             QTabBar::tab:selected {
@@ -375,43 +425,7 @@ class MainWindow(QMainWindow):
                 background: none;
             }
             
-            /* ComboBox */
-            QComboBox {
-                background-color: #3c3c3c;
-                border: 2px solid #555555;
-                border-radius: 6px;
-                padding: 8px;
-                color: #ffffff;
-                font-size: 11px;
-            }
-            
-            QComboBox:focus {
-                border-color: #6EA6BC;
-            }
-            
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-            
-            QComboBox::down-arrow {
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
-            }
-            
-            /* SpinBox and TimeEdit - hide up/down buttons */
-            QSpinBox::up-button, QSpinBox::down-button, QTimeEdit::up-button, QTimeEdit::down-button {
-                width: 0px;
-                height: 0px;
-                border: none;
-                background: transparent;
-            }
-            
-            QSpinBox::up-arrow, QSpinBox::down-arrow, QTimeEdit::up-arrow, QTimeEdit::down-arrow {
-                width: 0px;
-                height: 0px;
-                border: none;
-                background: transparent;
-            }
+
             
             /* Message Boxes and Dialogs */
             QMessageBox {
@@ -459,6 +473,16 @@ class MainWindow(QMainWindow):
                 padding: 8px;
                 color: #ffffff;
             }
+            
+            /* Scroll Areas */
+            QScrollArea {
+                background-color: #2b2b2b;
+                border: none;
+            }
+            
+            QScrollArea > QWidget > QWidget {
+                background-color: #2b2b2b;
+            }
         """)
     
     def setup_light_theme(self):
@@ -472,23 +496,73 @@ class MainWindow(QMainWindow):
             }
             
             /* Input Fields */
-            QLineEdit, QSpinBox, QTimeEdit {
+            QLineEdit, QSpinBox, QTimeEdit, QComboBox {
                 background-color: #ffffff;
                 border: 2px solid #cccccc;
                 border-radius: 6px;
-                padding: 2px 8px;
+                padding: 8px;
                 color: #333333;
-                font-size: 11px;
+                font-size: 13px;
+                font-weight: normal;
                 selection-background-color: #6EA6BC;
+                min-height: 20px;
+                max-height: 36px;
             }
             
-            QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus {
+            QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus, QComboBox:focus {
                 border-color: #6EA6BC;
                 background-color: #ffffff;
+                outline: none;
+            }
+            
+            QLineEdit:hover, QSpinBox:hover, QTimeEdit:hover, QComboBox:hover {
+                border-color: #6EA6BC;
             }
             
             QLineEdit::placeholder {
                 color: #888888;
+                font-style: italic;
+            }
+            
+            /* Completely hide SpinBox and TimeEdit buttons */
+            QSpinBox::up-button, QSpinBox::down-button, 
+            QTimeEdit::up-button, QTimeEdit::down-button {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+                subcontrol-origin: border;
+                subcontrol-position: right;
+            }
+            
+            QSpinBox::up-arrow, QSpinBox::down-arrow, 
+            QTimeEdit::up-arrow, QTimeEdit::down-arrow {
+                width: 0px;
+                height: 0px;
+                border: none;
+                background: transparent;
+            }
+            
+            /* ComboBox dropdown styling */
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background: transparent;
+            }
+            
+            QComboBox::down-arrow {
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
+                width: 12px;
+                height: 12px;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: #ffffff;
+                border: 2px solid #cccccc;
+                border-radius: 6px;
+                color: #333333;
+                selection-background-color: #6EA6BC;
+                outline: none;
             }
             
             /* Buttons */
@@ -549,7 +623,7 @@ class MainWindow(QMainWindow):
                 border: 2px solid #cccccc;
                 border-radius: 8px;
                 margin-top: 12px;
-                padding-top: 12px;
+                padding: 16px;  /* Increased padding */
                 background-color: #ffffff;
             }
             
@@ -575,11 +649,11 @@ class MainWindow(QMainWindow):
                 border-bottom: none;
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
-                padding: 10px 16px;
+                padding: 10px 32px;  /* Reverted padding */
                 margin-right: 2px;
                 color: #333333;
                 font-weight: 500;
-                min-width: 80px;
+                min-width: 120px;  /* Increased min-width to prevent text cutoff */
             }
             
             QTabBar::tab:selected {
@@ -631,43 +705,7 @@ class MainWindow(QMainWindow):
                 background: none;
             }
             
-            /* ComboBox */
-            QComboBox {
-                background-color: #ffffff;
-                border: 2px solid #cccccc;
-                border-radius: 6px;
-                padding: 8px;
-                color: #333333;
-                font-size: 11px;
-            }
-            
-            QComboBox:focus {
-                border-color: #6EA6BC;
-            }
-            
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-            
-            QComboBox::down-arrow {
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgNC41TDYgNy41TDkgNC41IiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=);
-            }
-            
-            /* SpinBox and TimeEdit - hide up/down buttons */
-            QSpinBox::up-button, QSpinBox::down-button, QTimeEdit::up-button, QTimeEdit::down-button {
-                width: 0px;
-                height: 0px;
-                border: none;
-                background: transparent;
-            }
-            
-            QSpinBox::up-arrow, QSpinBox::down-arrow, QTimeEdit::up-arrow, QTimeEdit::down-arrow {
-                width: 0px;
-                height: 0px;
-                border: none;
-                background: transparent;
-            }
+
             
             /* Message Boxes and Dialogs */
             QMessageBox {
@@ -714,6 +752,16 @@ class MainWindow(QMainWindow):
                 border-radius: 6px;
                 padding: 8px;
                 color: #333333;
+            }
+            
+            /* Scroll Areas */
+            QScrollArea {
+                background-color: #f5f5f5;
+                border: none;
+            }
+            
+            QScrollArea > QWidget > QWidget {
+                background-color: #f5f5f5;
             }
         """)
     
@@ -795,6 +843,11 @@ class MainWindow(QMainWindow):
         # Search Configuration
         search_group = QGroupBox("Search Configuration")
         search_layout = QFormLayout(search_group)
+        search_layout.setVerticalSpacing(18)  # Increased vertical spacing between rows
+        search_layout.setLabelAlignment(Qt.AlignRight)  # Align labels to the right
+        search_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)  # Allow fields to grow
+        search_layout.setFormAlignment(Qt.AlignLeft | Qt.AlignTop)  # Align form to top-left
+        search_layout.setContentsMargins(8, 8, 8, 8)  # Add margins around the form
         
         # Property Types
         self.property_types = QWidget()
@@ -823,6 +876,9 @@ class MainWindow(QMainWindow):
         price_widget = QWidget()
         price_layout = QHBoxLayout(price_widget)
         price_layout.setContentsMargins(0, 0, 0, 0)
+        price_widget.setStyleSheet("padding-top: 4px; padding-bottom: 4px;")
+        price_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        price_layout.setAlignment(Qt.AlignVCenter)
         
         self.min_price_edit = QLineEdit()
         self.min_price_edit.setPlaceholderText("Min price")
@@ -841,6 +897,8 @@ class MainWindow(QMainWindow):
         websites_widget = QWidget()
         websites_layout = QHBoxLayout(websites_widget)
         websites_layout.setContentsMargins(0, 0, 0, 0)
+        websites_widget.setStyleSheet("padding-top: 4px; padding-bottom: 4px;")
+        websites_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         
         self.realcommercial_cb = QCheckBox("LoopNet.com")
         self.commercialrealestate_cb = QCheckBox("CommercialMLS.com")
@@ -963,7 +1021,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(uninstall_group)
         layout.addStretch()
         
-        self.tab_widget.addTab(config_widget, "Configuration")
+        # Create scroll area and add config widget to it
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(config_widget)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        self.tab_widget.addTab(scroll_area, "Configuration")
 
     def create_status_tab(self):
         """Create the status tab"""
@@ -2019,7 +2084,7 @@ def main():
         parser.add_argument('--execute-scraping', action='store_true', help='Execute scheduled scraping (called by Task Scheduler)')
         args = parser.parse_args()
         auto_save = args.auto_save
-        execute_scraping = args.execute_scraping
+        execute_scraping = args.execute-scraping
     except (SystemExit, AttributeError):
         # Handle argparse errors in executable mode
         auto_save = '--auto-save' in sys.argv

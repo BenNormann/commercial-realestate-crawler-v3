@@ -2,159 +2,46 @@
   "results": {
     "loopnet": [
       {
-        "address": "2410 W Manor Pl, Seattle, WA",
-        "price": "$7,750,000",
+        "address": "505 E Denny Way, Seattle, WA",
+        "price": "$725,000",
         "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/2410-W-Manor-Pl-Seattle-WA/36128731/"
-      },
-      {
-        "address": "8500 16th Ave NW, Seattle, WA",
-        "price": "$5,000,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/8500-16th-Ave-NW-Seattle-WA/36128612/"
-      },
-      {
-        "address": "4456 Whitman Ave N, Seattle, WA",
-        "price": "$1,790,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/4456-Whitman-Ave-N-Seattle-WA/36113413/"
-      },
-      {
-        "address": "4847 California Ave, Seattle, WA",
-        "price": "$1,300,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/4847-California-Ave-Seattle-WA/36083208/"
-      },
-      {
-        "address": "1319 NE 65th St, Seattle, WA",
-        "price": "$13,250,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/1319-NE-65th-St-Seattle-WA/36079914/"
-      },
-      {
-        "address": "710 N 41st St, Seattle, WA",
-        "price": "$3,695,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/710-N-41st-St-Seattle-WA/36027560/"
-      },
-      {
-        "address": "8805 14th Ave S, Seattle, WA",
-        "price": "$1,875,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/8805-14th-Ave-S-Seattle-WA/36016943/"
-      },
-      {
-        "address": "7060 Lincoln Park Way SW, Seattle, WA",
-        "price": "$6,950,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/7060-Lincoln-Park-Way-SW-Seattle-WA/36014128/"
-      },
-      {
-        "address": "110 Prefontaine Pl S, Seattle, WA",
-        "price": "$3,950,000",
-        "property_type": "Office",
-        "url": "https://www.loopnet.com/Listing/110-Prefontaine-Pl-S-Seattle-WA/35924207/"
-      },
-      {
-        "address": "232 7th Ave N, Seattle, WA",
-        "price": "$4,995,000",
-        "property_type": "Office",
-        "url": "https://www.loopnet.com/Listing/232-7th-Ave-N-Seattle-WA/35878650/"
-      },
-      {
-        "address": "4400 24th Ave W, Seattle, WA",
-        "price": "$3,600,000",
-        "property_type": "Industrial",
-        "url": "https://www.loopnet.com/Listing/4400-24th-Ave-W-Seattle-WA/35866111/"
-      },
-      {
-        "address": "206 12th Ave E, Seattle, WA",
-        "price": "$1,500,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/206-12th-Ave-E-Seattle-WA/35832475/"
-      },
-      {
-        "address": "5932 California Ave SW, Seattle, WA",
-        "price": "$1,998,000",
-        "property_type": "Office",
-        "url": "https://www.loopnet.com/Listing/5932-California-Ave-SW-Seattle-WA/35830545/"
-      },
-      {
-        "address": "4226 7th Ave NE, Seattle, WA",
-        "price": "$3,280,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/4226-7th-Ave-NE-Seattle-WA/35809441/"
-      },
-      {
-        "address": "12672 60th Ave S, Seattle, WA",
-        "price": "$4,700,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/12672-60th-Ave-S-Seattle-WA/35788545/"
-      },
-      {
-        "address": "3256 California Ave SW, Seattle, WA",
-        "price": "$1,400,000",
-        "property_type": "Retail",
-        "url": "https://www.loopnet.com/Listing/3256-California-Ave-SW-Seattle-WA/35763257/"
-      },
-      {
-        "address": "812 N 59th St, Seattle, WA",
-        "price": "$900,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/812-N-59th-St-Seattle-WA/35744013/"
-      },
-      {
-        "address": "137 23rd Ave E, Seattle, WA",
-        "price": "$1,895,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/137-23rd-Ave-E-Seattle-WA/35690618/"
-      },
-      {
-        "address": "8100 Delridge Way SW, Seattle, WA",
-        "price": "$975,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/8100-Delridge-Way-SW-Seattle-WA/35690074/"
-      },
-      {
-        "address": "4147 California Ave SW, Seattle, WA",
-        "price": "$4,300,000",
-        "property_type": "Retail",
-        "url": "https://www.loopnet.com/Listing/4147-California-Ave-SW-Seattle-WA/35637358/"
-      },
-      {
-        "address": "12728 33rd Ave NE, Seattle, WA",
-        "price": "$4,695,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/12728-33rd-Ave-NE-Seattle-WA/35625041/"
-      },
-      {
-        "address": "1521 NW 65th St, Seattle, WA",
-        "price": "$2,300,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/1521-NW-65th-St-Seattle-WA/35593490/"
-      },
-      {
-        "address": "603 Pontius Ave N, Seattle, WA",
-        "price": "$7,200,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/603-Pontius-Ave-N-Seattle-WA/35575976/"
-      },
-      {
-        "address": "2214 Queen Anne Ave, Seattle, WA",
-        "price": "$2,750,000",
-        "property_type": "Office",
-        "url": "https://www.loopnet.com/Listing/2214-Queen-Anne-Ave-Seattle-WA/35572667/"
-      },
-      {
-        "address": "711 N 35th St, Seattle, WA",
-        "price": "$10,700,000",
-        "property_type": "Multifamily",
-        "url": "https://www.loopnet.com/Listing/711-N-35th-St-Seattle-WA/35483800/"
+        "url": "https://www.loopnet.com/Listing/505-E-Denny-Way-Seattle-WA/36054400/"
       }
     ],
-    "commercialmls": []
+    "commercialmls": [
+      {
+        "property_type": "Retail",
+        "address": "Ambassadors Condominium",
+        "price": "$725,000",
+        "url": "https://www.commercialmls.com/search/usersearch#/property/1023840"
+      },
+      {
+        "property_type": "Retail",
+        "address": "City View Condominiums",
+        "price": "$700,000",
+        "url": "https://www.commercialmls.com/search/usersearch#/property/1037620"
+      },
+      {
+        "property_type": "Retail",
+        "address": "Mt Baker - Light Rail Adjacent",
+        "price": "$800,000",
+        "url": "https://www.commercialmls.com/search/usersearch#/property/1046991"
+      },
+      {
+        "property_type": "Office",
+        "address": "225 at Greenlake Condominiums",
+        "price": "$975,000",
+        "url": "https://www.commercialmls.com/search/usersearch#/property/1084143"
+      },
+      {
+        "property_type": "Multi-Family",
+        "address": "3904 27th Avenue S",
+        "price": "$550,000",
+        "url": "https://www.commercialmls.com/search/usersearch#/property/682b6ab879352d669b3e8cda"
+      }
+    ]
   },
-  "total_results": 25,
-  "datetime": "2025-06-10T14:34:00.374701",
-  "trigger": "scheduled"
+  "total_results": 6,
+  "datetime": "2025-06-12T16:31:13.925796",
+  "trigger": "manual_run"
 }
