@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+import random
 
 # Import the BaseScraper class
 from scraper.base_scraper import BaseScraper
@@ -145,7 +146,8 @@ class CommercialMLSScraper(BaseScraper):
             # Update progress after submitting search
             self.update_progress(0.65, progress_callback)
             
-            time.sleep(5)  # Wait for search results to load
+            # Wait for search results page to load completely
+            self.smart_wait("page_load", timeout=15)
             
             # Update progress after initial results load
             self.update_progress(0.7, progress_callback)
@@ -157,9 +159,9 @@ class CommercialMLSScraper(BaseScraper):
                 # Use standardized method instead of direct manipulation
                 self.click_element(self.selectors["grid_button"], "grid view button")
                 
-                # Add a significant sleep to ensure grid view fully loads
+                # Wait for grid view to load completely
                 self.logger.info("Waiting for grid view to load completely...")
-                time.sleep(5)  # Longer consistent sleep for both debug and normal modes
+                self.smart_wait("presence", self.selectors["grid_container"], timeout=15)
                 
                 self.logger.info("Successfully switched to grid view")
             except Exception as e:
@@ -211,18 +213,25 @@ class CommercialMLSScraper(BaseScraper):
         """
         # Set location
         log_action(self.logger, f"Setting location to: {location}")
-        self.click_element(self.selectors["location_dropdown"], "location dropdown")
-        self.input_text_with_wait(self.selectors["location_input"], location, "location input", press_enter=False)
-        
-        # Update progress after setting location
-        self.update_progress(0.25, progress_callback)
-        
-        # Press down arrow and then enter to select the first suggestion
-        self.logger.info("Selecting location from dropdown suggestions")
+        if not self.click_element(self.selectors["location_dropdown"], "location dropdown"):
+            return
+
+        # Wait for dropdown to open and input to become available
+        if not self.smart_wait("clickable", self.selectors["location_input"], timeout=10):
+            return
+
+        # Enter location text
+        self.input_text_with_wait(self.selectors["location_input"], location, "location input")
+
+        # Get element reference for arrow key navigation
         element = self.driver.find_element(By.CSS_SELECTOR, self.selectors["location_input"])
+
+        # Navigate to first suggestion and select it
+        time.sleep(random.uniform(0.1, 0.2))  # Wait for autocomplete
         element.send_keys(Keys.DOWN)
+        time.sleep(random.uniform(0.05, 0.1))
         element.send_keys(Keys.ENTER)
-        
+
         # Update progress after confirming location
         self.update_progress(0.3, progress_callback)
         
@@ -318,9 +327,10 @@ class CommercialMLSScraper(BaseScraper):
             wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.selectors["grid_container"])))
             grid_container = self.driver.find_element(By.CSS_SELECTOR, self.selectors["grid_container"])
             
-            # Add extra wait time to ensure all listing cards are fully rendered
-            self.logger.info("Waiting for listing cards to fully load...")
-            time.sleep(3)
+            # Wait for listing cards to fully load and stabilize - this is the critical fix
+            self.logger.info("Waiting for listing cards to fully load and stabilize...")
+            if not self.smart_wait("stable", self.selectors["listing_cards"], min_count=1, timeout=20, stable_time=2.0):
+                self.logger.warning("Listing cards did not stabilize within timeout, proceeding anyway")
             
             # Find all listing cards within the grid
             listing_cards = grid_container.find_elements(By.CSS_SELECTOR, self.selectors["listing_cards"])

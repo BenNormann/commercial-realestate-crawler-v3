@@ -12,6 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+import random
 
 class BaseScraper(ABC):
     """Base scraper class for real estate websites"""
@@ -114,7 +115,7 @@ class BaseScraper(ABC):
                 document.body.style.height = 'auto';
             }
         """)
-        time.sleep(0.5)  # Short wait for DOM updates
+        time.sleep(0.1)  # Quick wait for DOM updates
 
     def click_element(self, selector_or_element, element_name: str = "", max_retries: int = 3) -> bool:
         """Click an element with comprehensive retry logic and multiple click strategies
@@ -136,21 +137,27 @@ class BaseScraper(ABC):
             try:
                 # First remove any overlays
                 self._remove_overlays()
-                time.sleep(0.3)
+                # Quick delay after overlay removal
+                time.sleep(random.uniform(0.1, 0.2))
                 
                 if self.logger:
                     self.logger.debug(f"Clicking {element_desc} (attempt {attempt+1}/{max_retries})")
                 
                 # Get the element if a selector was provided
                 if isinstance(selector_or_element, str):
-                    wait = WebDriverWait(self.driver, self.wait_time)
-                    element = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector_or_element)))
+                    # Use smart wait for clickable element
+                    if not self.smart_wait("clickable", selector_or_element, timeout=self.wait_time):
+                        if self.logger:
+                            self.logger.warning(f"Element not clickable within timeout: {element_desc}")
+                        continue
+                    element = self.driver.find_element(By.CSS_SELECTOR, selector_or_element)
                 else:
                     element = selector_or_element
                 
                 # Make sure element is in viewport
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                time.sleep(0.3)
+                # Quick delay after scrolling
+                time.sleep(random.uniform(0.1, 0.2))
                 
                 # Try multiple click strategies
                 click_methods = [
@@ -165,7 +172,8 @@ class BaseScraper(ABC):
                 for i, click_method in enumerate(click_methods):
                     try:
                         click_method()
-                        time.sleep(0.3)  # Wait for click to register
+                        # Quick delay after click to let it register
+                        time.sleep(random.uniform(0.1, 0.2))
                         return True
                     except Exception as e:
                         if i == len(click_methods) - 1:  # If this was the last method
@@ -175,12 +183,14 @@ class BaseScraper(ABC):
                         # Otherwise continue to next method
                 
                 # If we reach here, all click methods failed on this attempt
-                time.sleep(0.5)  # Wait before retry
+                # Quick delay before retry
+                time.sleep(random.uniform(0.1, 0.2))
                 
             except Exception as e:
                 if self.logger:
                     self.logger.warning(f"Click attempt {attempt+1} failed for {element_desc}: {str(e)}")
-                time.sleep(0.5)  # Wait before retry
+                # Quick delay before retry
+                time.sleep(random.uniform(0.1, 0.2))
         
         # If we reach here, all attempts failed
         if self.logger:
@@ -205,27 +215,35 @@ class BaseScraper(ABC):
         try:
             # First remove any overlays
             self._remove_overlays()
-            time.sleep(0.5)
+            # Quick delay after overlay removal
+            time.sleep(random.uniform(0.1, 0.2))
             
             if self.logger:
                 self.logger.debug(f"Entering text in {element_desc}")
             
-            # Wait for element to be present and clickable
-            wait = WebDriverWait(self.driver, self.wait_time)
-            element = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
+            # Use smart wait for element to be clickable
+            if not self.smart_wait("clickable", selector, timeout=self.wait_time):
+                if self.logger:
+                    self.logger.error(f"Input element not clickable within timeout: {element_desc}")
+                return False
+            
+            element = self.driver.find_element(By.CSS_SELECTOR, selector)
             
             # Click to focus the element
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
             element.click()
-            time.sleep(0.2)
+            # Quick delay after click
+            time.sleep(random.uniform(0.05, 0.1))
             
             # Clear the field if requested
             if clear_first:
                 element.clear()
-                time.sleep(0.2)
+                # Quick delay after clear
+                time.sleep(random.uniform(0.05, 0.1))
                 # Double check it's cleared with JavaScript
                 self.driver.execute_script("arguments[0].value = '';", element)
-                time.sleep(0.2)
+                # Quick delay after JS clear
+                time.sleep(random.uniform(0.05, 0.1))
             
             # Try multiple methods to input text
             try:
@@ -250,7 +268,8 @@ class BaseScraper(ABC):
                 time.sleep(0.3)
                 element.send_keys(Keys.ENTER)
             
-            time.sleep(0.5)  # Wait for input to register
+            # Quick delay for input to register
+            time.sleep(random.uniform(0.1, 0.2))
             return True
             
         except Exception as e:
@@ -270,8 +289,10 @@ class BaseScraper(ABC):
             bool: True if we're on the right page, False otherwise
         """
         try:
-            # Wait for page to load
-            time.sleep(wait_time)
+            # Use smart wait for page to load instead of fixed sleep
+            if not self.smart_wait("page_load", timeout=wait_time):
+                if self.logger:
+                    self.logger.warning(f"Page did not fully load within {wait_time} seconds")
             
             # Get current URL
             current_url = self.driver.current_url.lower()
@@ -305,6 +326,137 @@ class BaseScraper(ABC):
         if progress_callback:
             progress_callback(progress)
     
+    def smart_wait(self, 
+                   condition_type: str = "presence", 
+                   selector: str = None, 
+                   expected_count: int = None,
+                   min_count: int = 1,
+                   timeout: int = 15,
+                   stable_time: float = 1.0,
+                   human_delay: bool = True) -> bool:
+        """Smart wait function that waits for specific conditions with dynamic timeouts
+        
+        Args:
+            condition_type: Type of condition to wait for:
+                - "presence": Wait for element(s) to be present in DOM
+                - "visible": Wait for element(s) to be visible
+                - "clickable": Wait for element to be clickable
+                - "count": Wait for a specific number of elements
+                - "min_count": Wait for at least min_count elements
+                - "stable": Wait for content to stabilize (no changes for stable_time)
+                - "page_load": Wait for page to finish loading
+            selector: CSS selector for elements (required for most conditions)
+            expected_count: Expected number of elements (for "count" condition)
+            min_count: Minimum number of elements (for "min_count" condition)
+            timeout: Maximum time to wait in seconds
+            stable_time: Time to wait for stability in seconds
+            human_delay: Whether to add small human-like delays
+            
+        Returns:
+            bool: True if condition was met, False if timeout occurred
+        """
+        start_time = time.time()
+        
+        if self.logger:
+            self.logger.debug(f"Smart wait: {condition_type} for '{selector}' (timeout: {timeout}s)")
+        
+        # Add initial human-like delay
+        if human_delay:
+            time.sleep(random.uniform(0.05, 0.1))
+        
+        try:
+            if condition_type == "page_load":
+                # Wait for page to finish loading
+                WebDriverWait(self.driver, timeout).until(
+                    lambda driver: driver.execute_script("return document.readyState") == "complete"
+                )
+                if human_delay:
+                    time.sleep(random.uniform(0.1, 0.2))
+                return True
+                
+            elif condition_type == "presence":
+                WebDriverWait(self.driver, timeout).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+                )
+                if human_delay:
+                    time.sleep(random.uniform(0.05, 0.1))
+                return True
+                
+            elif condition_type == "visible":
+                WebDriverWait(self.driver, timeout).until(
+                    EC.visibility_of_element_located((By.CSS_SELECTOR, selector))
+                )
+                if human_delay:
+                    time.sleep(random.uniform(0.05, 0.1))
+                return True
+                
+            elif condition_type == "clickable":
+                WebDriverWait(self.driver, timeout).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                )
+                if human_delay:
+                    time.sleep(random.uniform(0.05, 0.1))
+                return True
+                
+            elif condition_type in ["count", "min_count"]:
+                # Wait for specific number of elements
+                target_count = expected_count if condition_type == "count" else min_count
+                
+                def count_condition(driver):
+                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    current_count = len(elements)
+                    if condition_type == "count":
+                        return current_count == target_count
+                    else:  # min_count
+                        return current_count >= target_count
+                
+                WebDriverWait(self.driver, timeout).until(count_condition)
+                if human_delay:
+                    time.sleep(random.uniform(0.1, 0.2))
+                return True
+                
+            elif condition_type == "stable":
+                # Wait for content to stabilize (no changes for stable_time)
+                last_count = 0
+                stable_start = None
+                
+                while time.time() - start_time < timeout:
+                    try:
+                        elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        current_count = len(elements)
+                        
+                        if current_count == last_count and current_count >= min_count:
+                            if stable_start is None:
+                                stable_start = time.time()
+                            elif time.time() - stable_start >= stable_time:
+                                if self.logger:
+                                    self.logger.debug(f"Content stabilized at {current_count} elements")
+                                if human_delay:
+                                    time.sleep(random.uniform(0.1, 0.2))
+                                return True
+                        else:
+                            stable_start = None
+                            last_count = current_count
+                        
+                        time.sleep(0.1)  # Check every 100ms for faster response
+                        
+                    except Exception:
+                        time.sleep(0.1)
+                        continue
+                
+                return False
+                
+        except TimeoutException:
+            if self.logger:
+                self.logger.warning(f"Smart wait timeout after {timeout}s for {condition_type}: '{selector}'")
+            return False
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Smart wait error: {str(e)}")
+            return False
+        
+        return False
+
     @abstractmethod
     def search(self, property_types: List[str], location: str, min_price: str = None,
               max_price: str = None, start_date: datetime = None, end_date: datetime = None,

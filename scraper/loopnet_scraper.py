@@ -60,7 +60,6 @@ class LoopNetScraper(BaseScraper):
         try:
             # First try to remove overlays using JavaScript
             self._remove_overlays()
-            time.sleep(1)
             
             # Then try to find and click any close buttons
             close_buttons = self.driver.find_elements(By.CSS_SELECTOR, "button.csgp-modal-close.ln-icon-close-hollow")
@@ -69,7 +68,6 @@ class LoopNetScraper(BaseScraper):
                     if button.is_displayed():
                         # Use standardized click method for better reliability
                         self.click_element(button, "popup close button")
-                        time.sleep(0.5)
                 except:
                     continue
             
@@ -174,11 +172,8 @@ class LoopNetScraper(BaseScraper):
                         try:
                             log_action(self.logger, f"Setting minimum price: {min_price}")
                             self.input_text_with_wait(self.SELECTORS['min_price_box'], min_price, "minimum price input", clear_first=True)
-                            # Tab out of the field to ensure value is applied
-                            element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['min_price_box'])
-                            element.send_keys(Keys.TAB)
                         except Exception as e:
-                            self.logger.warning(f"Standard approach for min price failed: {str(e)}")
+                            self.logger.warning(f"Setting min price failed: {str(e)}")
                     
                     # Update progress after setting min price
                     self.update_progress(0.45, progress_callback)
@@ -188,18 +183,11 @@ class LoopNetScraper(BaseScraper):
                         try:
                             log_action(self.logger, f"Setting maximum price: {max_price}")
                             self.input_text_with_wait(self.SELECTORS['max_price_box'], max_price, "maximum price input", clear_first=True)
-                            
-                            # Tab out of field to ensure value is applied
-                            element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['max_price_box'])
-                            element.send_keys(Keys.TAB)
                         except Exception as e:
-                            self.logger.warning(f"Standard approach for max price failed: {str(e)}")
+                            self.logger.warning(f"Setting max price failed: {str(e)}")
                     
                     # Update progress after setting max price
                     self.update_progress(0.5, progress_callback)
-                    
-                    # Click outside inputs to ensure focus is lost and prevent any unexpected form submission
-                    self.driver.execute_script("document.activeElement.blur();")
                 
                 # Set date filter if start_date is provided
                 if start_date:
@@ -210,10 +198,6 @@ class LoopNetScraper(BaseScraper):
                     date_str = start_date.strftime("%m/%d/%Y")
                     log_action(self.logger, f"Setting start date: {date_str}")
                     self.input_text_with_wait(self.SELECTORS['start_date_box'], date_str, "start date input", clear_first=True)
-                    
-                    # Tab out of date field to ensure value is applied
-                    element = self.driver.find_element(By.CSS_SELECTOR, self.SELECTORS['start_date_box'])
-                    element.send_keys(Keys.TAB)
                     
                     # Update progress after setting date filter
                     self.update_progress(0.55, progress_callback)
@@ -296,6 +280,17 @@ class LoopNetScraper(BaseScraper):
         log_action(self.logger, "Extracting listings")
         
         try:
+            # Wait for search results page to fully load and stabilize
+            self.smart_wait("page_load", timeout=15)
+            
+            # Wait for listing elements to be present and stable
+            self.logger.info("Waiting for listing content to stabilize...")
+            if not self.smart_wait("stable", "a[title*='More details for']", min_count=1, timeout=20, stable_time=2.0):
+                self.logger.warning("Listing content did not stabilize, trying alternative approach")
+                # Try waiting for placard containers as fallback
+                if not self.smart_wait("min_count", "div.placard-content, .property-card, article.placard", min_count=1, timeout=15):
+                    self.logger.warning("No listing containers found, proceeding with extraction anyway")
+            
             # Get the page source and parse with BeautifulSoup
             page_source = self.driver.page_source
             soup = BeautifulSoup(page_source, 'html.parser')
