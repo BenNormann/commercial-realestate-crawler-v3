@@ -2084,7 +2084,7 @@ def main():
         parser.add_argument('--execute-scraping', action='store_true', help='Execute scheduled scraping (called by Task Scheduler)')
         args = parser.parse_args()
         auto_save = args.auto_save
-        execute_scraping = args.execute-scraping
+        execute_scraping = args.execute_scraping
     except (SystemExit, AttributeError):
         # Handle argparse errors in executable mode
         auto_save = '--auto-save' in sys.argv
